@@ -27,7 +27,7 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
+MANAGER = "manager@mantiq.test"
 TOKEN = "EAAG-live-token-that-must-never-be-logged"
 PHONE_ID = "109999888777"
 

@@ -25,6 +25,13 @@ const skip = env.E2E_SKIP_WEBSERVER === "1";
  * published back into the environment because e2e/global-setup.ts warms the same origin.
  */
 const usePreview = env.E2E_USE_PREVIEW === "1";
+
+/**
+ * `E2E_CHROMIUM_PATH` points the suite at a Chromium that Playwright did not download — a system/build
+ * browser in a sandbox whose egress blocks `cdn.playwright.dev`. Without it the only way to run e2e in such
+ * an environment is to patch this file, which nobody should have to do.
+ */
+const chromiumPath = env.E2E_CHROMIUM_PATH;
 const webPort = usePreview ? (env.E2E_WEB_PREVIEW_PORT ?? WEB_PORT) : WEB_PORT;
 const webCommand = usePreview
   ? `npm run build && npx vite preview --host 0.0.0.0 --port ${webPort} --strictPort`
@@ -57,6 +64,7 @@ export default defineConfig({
   outputDir: "test-results/e2e",
   use: {
     baseURL: `http://127.0.0.1:${webPort}`,
+    ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}),
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",

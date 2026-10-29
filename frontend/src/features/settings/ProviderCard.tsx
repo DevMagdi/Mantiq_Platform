@@ -120,7 +120,7 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
             {badge.tone ? (
               <Badge tone={badge.tone}>{t(badge.labelKey)}</Badge>
             ) : (
-              <span className="inline-flex items-center rounded-pill px-[10px] py-[3px] text-xs font-semibold" style={{ background: "var(--kanban-col)", color: "var(--muted)" }}>
+              <span className="inline-flex items-center rounded-pill px-[10px] py-[3px] text-xs font-semibold" style={{ background: "var(--color-track)", color: "var(--color-muted)" }}>
                 {t(badge.labelKey)}
               </span>
             )}
@@ -148,7 +148,7 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
                     type="checkbox"
                     name={`config-${key}`}
                     data-testid={`config-${state.provider}-${key}`}
-                    className="h-4 w-4 accent-[var(--primary)]"
+                    className="h-4 w-4 accent-[var(--color-accent)]"
                     checked={Boolean(current)}
                     onChange={(event) => setConfig((prev) => ({ ...prev, [key]: event.target.checked }))}
                   />
@@ -158,7 +158,7 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
                 <input
                   name={`config-${key}`}
                   data-testid={`config-${state.provider}-${key}`}
-                  className="w-full rounded-btn border border-line bg-white px-3 py-2 text-[13px] text-ink"
+                  className="w-full rounded-btn border border-line bg-surface px-3 py-2 text-[13px] text-ink"
                   value={String(current ?? "")}
                   inputMode={typeof original === "number" ? "numeric" : undefined}
                   list={CHOICES[key] ? `${state.provider}-${key}` : undefined}
@@ -189,7 +189,7 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
               <input
                 name={`secret-${field.key}`}
                 data-testid={`secret-${state.provider}-${field.key}`}
-                className="min-w-0 flex-1 rounded-btn border border-line bg-white px-3 py-2 text-[13px] text-ink"
+                className="min-w-0 flex-1 rounded-btn border border-line bg-surface px-3 py-2 text-[13px] text-ink"
                 type="password"
                 placeholder={field.set ? MASK : t("settings.secretNotSet")}
                 value={draft.value}
@@ -234,7 +234,7 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
       ) : null}
 
       {templates?.length ? (
-        <div className="mt-3 rounded-btn bg-[var(--kanban-col)] p-3">
+        <div className="mt-3 rounded-btn bg-[var(--color-track)] p-3">
           <div className="mb-1 text-[12px] font-semibold text-muted">{t("settings.templates")}</div>
           <ul className="space-y-1">
             {templates.map((item) => (

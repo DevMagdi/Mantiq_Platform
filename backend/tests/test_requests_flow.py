@@ -15,8 +15,8 @@ from app.services import requests_svc
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP = "rep_a@mantiq.test"
 
 
 async def _create(client: Any, auth: dict[str, str], **overrides: Any) -> dict[str, Any]:

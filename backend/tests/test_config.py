@@ -26,8 +26,8 @@ def test_cors_origins_accepts_the_comma_separated_form_from_env(monkeypatch: pyt
 
 
 def test_cors_origins_still_accepts_a_json_array(monkeypatch: pytest.MonkeyPatch) -> None:
-    settings = _settings(monkeypatch, CORS_ORIGINS='["https://app.brokerhub.test"]')
-    assert settings.CORS_ORIGINS == ["https://app.brokerhub.test"]
+    settings = _settings(monkeypatch, CORS_ORIGINS='["https://app.mantiq.test"]')
+    assert settings.CORS_ORIGINS == ["https://app.mantiq.test"]
 
 
 def test_weekend_days_accepts_both_forms(monkeypatch: pytest.MonkeyPatch) -> None:

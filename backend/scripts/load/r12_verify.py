@@ -14,7 +14,7 @@ from app.models.requests import Attachment, ServiceRequest
 from sqlalchemy import func, select, text
 
 BASE = os.environ.get("BASE", "http://127.0.0.1:8022")
-PASSWORD = os.getenv("LOAD_PASSWORD", "Br0kerHub!2026")
+PASSWORD = os.getenv("LOAD_PASSWORD", "Mantiq!2026")
 
 
 async def db_checks() -> dict[str, int]:
@@ -55,8 +55,8 @@ async def login(client: httpx.AsyncClient, email: str) -> str:
 
 async def isolation_checks() -> dict[str, int]:
     async with httpx.AsyncClient(timeout=30) as client:
-        mgr = await login(client, "manager@brokerhub.test")
-        rep = await login(client, "load.rep00@brokerhub.test")
+        mgr = await login(client, "manager@mantiq.test")
+        rep = await login(client, "load.rep00@mantiq.test")
         # a request the rep does not own: manager sees all, pick one assigned to someone else / unassigned
         listing = await client.get(f"{BASE}/api/v1/requests?page_size=50", headers={"Authorization": f"Bearer {mgr}"})
         items = listing.json().get("items", [])

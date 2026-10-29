@@ -37,16 +37,16 @@ export function Stepper({ status }: { status: string }) {
             <span className="flex w-full items-center gap-1.5">
               <span
                 className="h-[2px] flex-1 rounded-full"
-                style={{ background: index === 0 ? "transparent" : "var(--line-2)" }}
+                style={{ background: index === 0 ? "transparent" : "var(--color-border-strong)" }}
               />
               <span
                 className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full text-[12px] font-bold"
                 style={
                   state === "done"
-                    ? { background: "var(--g-ink)", color: "#fff" }
+                    ? { background: "var(--g-ink)", color: "var(--color-surface)" }
                     : state === "current"
-                      ? { background: "var(--primary)", color: "#fff", boxShadow: "0 0 0 5px var(--primary-soft)" }
-                      : { background: "#fff", color: "var(--muted)", border: "1.5px solid var(--line-2)" }
+                      ? { background: "var(--color-accent)", color: "var(--color-on-accent)", boxShadow: "0 0 0 5px var(--color-accent-muted)" }
+                      : { background: "var(--color-surface)", color: "var(--color-muted)", border: "1.5px solid var(--color-border-strong)" }
                 }
                 aria-current={state === "current" ? "step" : undefined}
               >
@@ -54,7 +54,7 @@ export function Stepper({ status }: { status: string }) {
               </span>
               <span
                 className="h-[2px] flex-1 rounded-full"
-                style={{ background: index === STEPS.length - 1 ? "transparent" : "var(--line-2)" }}
+                style={{ background: index === STEPS.length - 1 ? "transparent" : "var(--color-border-strong)" }}
               />
             </span>
             <span className={`text-[12px] font-semibold ${state === "todo" ? "text-muted" : "text-ink"}`}>

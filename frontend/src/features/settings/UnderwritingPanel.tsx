@@ -55,7 +55,7 @@ export function UnderwritingPanel() {
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-muted">{t("settings.underwriting.commission")}</span>
           <input
-            className="w-full rounded-btn border border-line bg-white px-3 py-2 text-[13px] text-ink"
+            className="w-full rounded-btn border border-line bg-surface px-3 py-2 text-[13px] text-ink"
             type="number"
             min={0}
             max={100}
@@ -67,7 +67,7 @@ export function UnderwritingPanel() {
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-muted">{t("settings.underwriting.plan")}</span>
           <select
-            className="w-full rounded-btn border border-line bg-white px-3 py-2 text-[13px] text-ink"
+            className="w-full rounded-btn border border-line bg-surface px-3 py-2 text-[13px] text-ink"
             value={values.default_payment_plan}
             onChange={(event) => setDraft({ ...values, default_payment_plan: event.target.value })}
           >
@@ -81,7 +81,7 @@ export function UnderwritingPanel() {
         <label className="block">
           <span className="mb-1 block text-[12px] font-semibold text-muted">{t("settings.underwriting.currency")}</span>
           <input
-            className="w-full rounded-btn border border-line bg-white px-3 py-2 text-[13px] uppercase text-ink"
+            className="w-full rounded-btn border border-line bg-surface px-3 py-2 text-[13px] uppercase text-ink"
             value={values.default_currency}
             maxLength={8}
             onChange={(event) => setDraft({ ...values, default_currency: upper(asText(event.target.value)) })}

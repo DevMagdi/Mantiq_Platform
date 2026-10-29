@@ -67,7 +67,7 @@ test.describe("screenshots for design review", () => {
   test.beforeAll(async ({ request }) => {
     mkdirSync(OUT, { recursive: true });
     // phase 2 must be captured unlocked, otherwise half the sheet is a gate card (ADR-008)
-    const auth = await apiLogin(request, "admin@brokerhub.test");
+    const auth = await apiLogin(request, "admin@mantiq.test");
     const enabled = await request.patch("/api/v1/feature-flags/phase2.enabled", { headers: auth, data: { enabled: true } });
     expect(enabled.status()).toBe(200);
 
@@ -109,13 +109,13 @@ test.describe("screenshots for design review", () => {
     await page.setViewportSize({ width: 1800, height: 1200 });
     await page.setContent(
       `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><style>
-       body{margin:0;background:#0E1424;color:#E5E7EB;font:600 14px system-ui;padding:24px}
+       body{margin:0;background:#0E1728;color:#E8E2D4;font:600 14px system-ui;padding:24px}
        h1{font-size:20px;margin:0 0 16px}
        .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
-       figure{margin:0;background:#151B2E;border-radius:14px;overflow:hidden;border:1px solid #26304a}
+       figure{margin:0;background:#243553;border-radius:14px;overflow:hidden;border:1px solid rgba(232,226,212,.14)}
        img{display:block;width:100%;height:auto;background:#fff}
        figcaption{padding:8px 10px;font-size:12px}
-     </style></head><body><h1>Broker Hub — مراجعة الواجهات</h1><div class="grid">${cells}</div></body></html>`,
+     </style></head><body><h1>Mantiq · منطق — مراجعة الواجهات</h1><div class="grid">${cells}</div></body></html>`,
       { waitUntil: "load" },
     );
     await page.waitForTimeout(1_200);

@@ -19,9 +19,9 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP = "rep_a@brokerhub.test"
-CS = "cs@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP = "rep_a@mantiq.test"
+CS = "cs@mantiq.test"
 
 
 def _payload(external_id: str, mobile: str = "01099887766", body: str = "عايز أزيد عدد الموظفين") -> bytes:
@@ -230,14 +230,14 @@ async def test_voice_note_media_is_playable_for_staff_and_hidden_from_the_portal
         assert played.status_code == 200
         assert len(played.content) > 0
 
-    async with login(client, "owner@brokerhub.test") as auth:
+    async with login(client, "owner@mantiq.test") as auth:
         portal = await client.get("/api/v1/portal/requests", headers=auth)
     assert all("url" not in row for row in portal.json()["items"])
 
 
 async def test_simulator_panel_voice_note_is_stored_and_playable(client, ids: dict[str, dict[str, str]]) -> None:
     """/dev/sim is the only way to demo inbound media without credentials — it must be real, not cosmetic."""
-    async with login(client, "manager@brokerhub.test") as auth:
+    async with login(client, "manager@mantiq.test") as auth:
         panel = await client.get("/api/v1/dev/sim")
         assert panel.status_code == 200
         assert "محاكي القنوات الواردة" in panel.text

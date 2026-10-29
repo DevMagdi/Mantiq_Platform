@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -11,6 +11,13 @@ function keys(value: Record<string, unknown>, prefix = ""): string[] {
       ? keys(nested as Record<string, unknown>, `${prefix}${key}.`)
       : [`${prefix}${key}`],
   );
+}
+
+function walk(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const full = path.join(dir, entry);
+    return statSync(full).isDirectory() ? walk(full) : /\.(tsx?|ts)$/.test(entry) ? [full] : [];
+  });
 }
 
 function lookup(bag: unknown, key: string): string | undefined {
@@ -66,6 +73,25 @@ describe("translation parity", () => {
     }
     // the plans are a closed list owned by the model; a plan without a label would render its raw value
     expect(Object.keys(ar.settings.plan).sort()).toEqual(Object.keys(en.settings.plan).sort());
+  });
+
+  it("resolves every static `t(\"…\")` key in the source — a raw key on screen is a bug", () => {
+    // The settings-hub check above covers one directory; this covers all of `src/`. It found five raw keys
+    // that shipped on main — `users.scoped` in the shell's scope block, `auth.heroSla`/`heroSlaBody` on the
+    // login panel, `common.error` on the ERP export and `leads.needsTitle` on the lead card — which is
+    // exactly the class of defect a brand review photographs and a human misses.
+    const arabic = new Set(keys(ar as unknown as Record<string, unknown>));
+    const english = new Set(keys(en as unknown as Record<string, unknown>));
+    const src = path.join(__dirname, "../src");
+    const missing: string[] = [];
+    for (const file of walk(src)) {
+      if (file.includes(`${path.sep}i18n${path.sep}`)) continue;
+      for (const match of readFileSync(file, "utf8").matchAll(/\bt\(\s*"([a-zA-Z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)"/g)) {
+        const key = match[1] as string;
+        if (!arabic.has(key) || !english.has(key)) missing.push(`${key} → ${path.relative(src, file)}`);
+      }
+    }
+    expect([...new Set(missing)]).toEqual([]);
   });
 
   it("never leaves an empty string behind", () => {

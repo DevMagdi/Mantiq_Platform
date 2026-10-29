@@ -19,8 +19,8 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
 PASSWORD = "Test-Pass-2026"
 
 
@@ -155,14 +155,14 @@ async def test_an_unknown_rep_moves_nothing_at_all(client, ids: dict[str, dict[s
         )
         assert result.status_code == 422, result.text
         assert sorted(await _unassigned(client, auth)) == before
-        inactive = await _make_rep("ghost@brokerhub.test", active=False)
+        inactive = await _make_rep("ghost@mantiq.test", active=False)
         refused = await client.post("/api/v1/leads/assign-bulk", json={"lead_ids": [rows[0]["id"]], "to": [inactive]}, headers=auth)
         assert refused.status_code == 422, refused.text
         assert sorted(await _unassigned(client, auth)) == before
 
 
 async def test_an_inactive_rep_card_is_named_in_the_error(client, ids: dict[str, dict[str, str]]) -> None:
-    ghost = await _make_rep(f"inactive-{uuid4().hex[:8]}@brokerhub.test", active=False)
+    ghost = await _make_rep(f"inactive-{uuid4().hex[:8]}@mantiq.test", active=False)
     await _pool(1)
     async with login(client, MANAGER) as auth:
         refused = await client.post("/api/v1/leads/assign-bulk", json={"unassigned_only": True, "to": [ghost]}, headers=auth)
@@ -206,8 +206,8 @@ async def _make_rep(email: str, *, active: bool, deleted: bool = False) -> str:
 async def test_the_board_keeps_a_suspended_seat_and_marks_it(client, ids: dict[str, dict[str, str]]) -> None:
     """`is_active` is on the workload row so the picker can drop a seat the server would refuse, while the
     board itself still counts the leads that seat is holding — hiding them would hide the work."""
-    ghost = await _make_rep(f"suspended-{uuid4().hex[:8]}@brokerhub.test", active=False)
-    gone = await _make_rep(f"deleted-{uuid4().hex[:8]}@brokerhub.test", active=True, deleted=True)
+    ghost = await _make_rep(f"suspended-{uuid4().hex[:8]}@mantiq.test", active=False)
+    gone = await _make_rep(f"deleted-{uuid4().hex[:8]}@mantiq.test", active=True, deleted=True)
     async with login(client, MANAGER) as auth:
         rows = (await client.get("/api/v1/sales/team", headers=auth)).json()
         card = next(row for row in rows if row["rep_id"] == ghost)

@@ -53,18 +53,18 @@ async def _user(session, email: str) -> User:
 
 
 async def test_roles_map_to_the_expected_modes(session) -> None:
-    rep = build_scope(await _user(session, "rep_a@brokerhub.test"))
+    rep = build_scope(await _user(session, "rep_a@mantiq.test"))
     assert rep.mode == "owner" and rep.user_id is not None
-    manager = build_scope(await _user(session, "manager@brokerhub.test"))
+    manager = build_scope(await _user(session, "manager@mantiq.test"))
     assert manager.mode == "all" and manager.session_settings()["app.bypass_rls"] == "on"
-    admin = build_scope(await _user(session, "admin@brokerhub.test"))
+    admin = build_scope(await _user(session, "admin@mantiq.test"))
     assert admin.can(P.USERS_MANAGE) and admin.can(P.SETTINGS_MANAGE)
-    cs = build_scope(await _user(session, "cs@brokerhub.test"))
+    cs = build_scope(await _user(session, "cs@mantiq.test"))
     assert cs.can(P.REQUESTS_VIEW) and not cs.can(P.LEADS_VIEW_ALL)
 
 
 async def test_portal_users_are_pinned_to_their_company(session, ids) -> None:
-    owner = await _user(session, "owner@brokerhub.test")
+    owner = await _user(session, "owner@mantiq.test")
     assert isinstance(owner.portal_link, ClientPortalUser)
     scope = build_scope(owner)
     assert scope.mode == "portal_client"
@@ -74,7 +74,7 @@ async def test_portal_users_are_pinned_to_their_company(session, ids) -> None:
 
 async def test_explicit_scopes_turn_a_staff_account_into_a_seeded_union(session, ids) -> None:
     """An account manager covering two books is neither owner-only nor all-office (spec §6 user_scopes)."""
-    cs = await _user(session, "cs@brokerhub.test")
+    cs = await _user(session, "cs@mantiq.test")
     session.add_all(
         [
             UserScope(user_id=cs.id, scope_type=ScopeType.CLIENT, scope_id=UUID(ids["clients"]["ألف"])),
@@ -84,7 +84,7 @@ async def test_explicit_scopes_turn_a_staff_account_into_a_seeded_union(session,
     await session.commit()
     # the identity map still holds the pre-insert row, so drop it before re-reading the scope
     session.expire_all()
-    scope = build_scope(await _user(session, "cs@brokerhub.test"))
+    scope = build_scope(await _user(session, "cs@mantiq.test"))
     assert scope.mode == "seeded"
     assert {str(c) for c in scope.client_ids} == {ids["clients"]["ألف"], ids["clients"]["باء"]}
     assert scope.session_settings()["app.bypass_rls"] == "off"
@@ -92,11 +92,11 @@ async def test_explicit_scopes_turn_a_staff_account_into_a_seeded_union(session,
 
 async def test_a_role_without_permissions_sees_nothing(session) -> None:
     role = Role(code="observer", name="Observer", is_system=False)
-    user = User(email="observer@brokerhub.test", password_hash="x", full_name="Observer", role=role)
+    user = User(email="observer@mantiq.test", password_hash="x", full_name="Observer", role=role)
     session.add_all([role, user])
     await session.commit()
 
-    scope = build_scope(await _user(session, "observer@brokerhub.test"))
+    scope = build_scope(await _user(session, "observer@mantiq.test"))
     assert scope.mode == "none"
     assert scope.perms == frozenset()
     assert scope.can_any(P.LEADS_VIEW_OWN, P.REQUESTS_VIEW) is False

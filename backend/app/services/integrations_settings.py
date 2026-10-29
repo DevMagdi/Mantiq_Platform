@@ -108,8 +108,8 @@ PROVIDER_FIELDS: dict[str, tuple[FieldSpec, ...]] = {
         FieldSpec("port", "int", 0, minimum=0, maximum=65535),
         FieldSpec("username"),
         FieldSpec("encryption", "choice", "none", choices=("none", "starttls", "ssl")),
-        FieldSpec("from_name", default="Broker Hub"),
-        FieldSpec("from_email", "email", "no-reply@brokerhub.local", required_for_live=True),
+        FieldSpec("from_name", default="Mantiq"),
+        FieldSpec("from_email", "email", "no-reply@mantiq.local", required_for_live=True),
         FieldSpec("reply_to", "email", ""),
     ),
 }
@@ -1015,7 +1015,7 @@ def _smtp_probe(
             message = EmailMessage()
             message["From"] = f"{from_name} <{from_email}>" if from_name else from_email
             message["To"] = to
-            message["Subject"] = "Broker Hub — اختبار إعدادات البريد"
+            message["Subject"] = "Mantiq — اختبار إعدادات البريد"
             if reply_to:
                 message["Reply-To"] = reply_to
             message.set_content("رسالة اختبار من شاشة الإعدادات.\n")

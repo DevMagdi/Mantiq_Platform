@@ -23,9 +23,9 @@ from tests.helpers import login
 
 pytestmark = pytest.mark.integration
 
-ADMIN = "admin@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
-REP = "rep_a@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+MANAGER = "manager@mantiq.test"
+REP = "rep_a@mantiq.test"
 
 
 async def _enable_phase2(admin: Any, client: Any) -> None:

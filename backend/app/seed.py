@@ -66,14 +66,14 @@ from app.models.requests import (
 
 RNG = random.Random(20261026)
 REPS = [
-    ("sara.elsayed@brokerhub.test", "سara السيد"),
-    ("mostafa.adel@brokerhub.test", "مصطفى عادل"),
-    ("nour.fahmy@brokerhub.test", "نور فهمي"),
-    ("karim.hassan@brokerhub.test", "كريم حسن"),
+    ("sara.elsayed@mantiq.test", "سارة السيد"),
+    ("mostafa.adel@mantiq.test", "مصطفى عادل"),
+    ("nour.fahmy@mantiq.test", "نور فهمي"),
+    ("karim.hassan@mantiq.test", "كريم حسن"),
 ]
 # Demo-only credential for the seeded accounts. Override it in every real environment with
 # `SEED_PASSWORD`; the value below exists so `python -m app.seed` stays copy-pasteable in a dev box.
-PASSWORD = os.environ.get("SEED_PASSWORD", "Br0kerHub!2026")
+PASSWORD = os.environ.get("SEED_PASSWORD", "Mantiq!2026")
 
 INSURERS_CSV = Path(__file__).with_name("data") / "insurers_eg.csv"
 
@@ -135,7 +135,7 @@ async def seed(session: AsyncSession, *, reset: bool = False) -> dict[str, int]:
     users: dict[str, User] = {}
     for key, code in (("manager", "sales_manager"), ("cs", "customer_service"), ("am", "account_manager")):
         user = User(
-            email=f"{key}@brokerhub.test",
+            email=f"{key}@mantiq.test",
             password_hash=hash_password(PASSWORD),
             full_name={"manager": "مدير المبيعات", "cs": "منى خدمة العملاء", "am": "حسام مدير حسابات"}[key],
             role_id=roles[code].id,
@@ -144,7 +144,7 @@ async def seed(session: AsyncSession, *, reset: bool = False) -> dict[str, int]:
         users[key] = user
     session.add(
         User(
-            email="admin@brokerhub.test",
+            email="admin@mantiq.test",
             password_hash=hash_password(PASSWORD),
             full_name="مدير النظام",
             role_id=roles["system_admin"].id,

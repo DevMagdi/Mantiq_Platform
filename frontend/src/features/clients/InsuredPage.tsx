@@ -98,7 +98,7 @@ export default function InsuredPage() {
             action={
               total > 25 ? (
                 <div className="flex items-center gap-2 text-[12.5px] text-muted">
-                  <button type="button" className="font-semibold text-primary disabled:text-line-2" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>
+                  <button type="button" className="font-semibold text-accent-ink disabled:text-line-2" disabled={page === 1} onClick={() => setPage((value) => value - 1)}>
                     {t("common.back")}
                   </button>
                   <span>
@@ -106,7 +106,7 @@ export default function InsuredPage() {
                   </span>
                   <button
                     type="button"
-                    className="font-semibold text-primary disabled:text-line-2"
+                    className="font-semibold text-accent-ink disabled:text-line-2"
                     disabled={page * 25 >= total}
                     onClick={() => setPage((value) => value + 1)}
                   >

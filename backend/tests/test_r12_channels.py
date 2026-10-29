@@ -13,9 +13,9 @@ from sqlalchemy import func, select
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-ADMIN = "admin@brokerhub.test"
-REP = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+ADMIN = "admin@mantiq.test"
+REP = "rep_a@mantiq.test"
 pytestmark = pytest.mark.integration
 
 

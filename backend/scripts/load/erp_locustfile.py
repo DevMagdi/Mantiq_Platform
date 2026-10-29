@@ -12,8 +12,8 @@ import os
 
 from locust import HttpUser, between, task
 
-PASSWORD = os.environ.get("LOAD_PASSWORD", "Br0kerHub!2026")
-MANAGER = os.environ.get("LOAD_MANAGER", "manager@brokerhub.test")
+PASSWORD = os.environ.get("LOAD_PASSWORD", "Mantiq!2026")
+MANAGER = os.environ.get("LOAD_MANAGER", "manager@mantiq.test")
 PERIODS = ["month", "quarter", "semiannual", "year"]
 _counter = itertools.count()
 

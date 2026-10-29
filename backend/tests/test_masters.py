@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from tests.helpers import login
 
-ADMIN = "admin@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+MANAGER = "manager@mantiq.test"
 
 CSV = "code,name,name_en\nmediya,ميديا,Medya\naxa,أكسا,AXA\n,\nbroken,,\n".encode()
 
@@ -41,7 +41,7 @@ async def test_csv_import_upserts_and_never_deletes(client) -> None:
         assert len((await client.get("/api/v1/insurers", headers=h)).json()) == 3
 
         # master data belongs to managers and up; a rep may not write it
-        async with login(client, "rep_a@brokerhub.test") as rh:
+        async with login(client, "rep_a@mantiq.test") as rh:
             refused = await client.post("/api/v1/insurers/import-csv", headers=rh, files={"file": ("x.csv", CSV, "text/csv")})
             assert refused.status_code == 403
 

@@ -51,7 +51,7 @@ export default function MobileLeadsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#E9ECF6] py-0 sm:py-6">
+    <div className="min-h-screen bg-track py-0 sm:py-6">
       <div className="relative mx-auto flex min-h-screen w-full flex-col bg-bg sm:min-h-[844px] sm:max-w-[390px] sm:rounded-card sm:border sm:border-line sm:shadow-card">
         <header className="sticky top-0 z-10 bg-bg/95 px-4 pb-3 pt-4 backdrop-blur">
           <div className="flex items-center justify-between gap-3">
@@ -68,7 +68,7 @@ export default function MobileLeadsPage() {
               type="button"
               onClick={() => void refresh()}
               aria-busy={refreshing}
-              className="grid h-9 w-9 place-items-center rounded-full bg-[var(--primary-soft)] text-[var(--primary-ink)] transition active:scale-95"
+              className="grid h-9 w-9 place-items-center rounded-full bg-[var(--color-accent-muted)] text-[var(--color-accent-ink)] transition active:scale-95"
               aria-label={t("common.retry")}
             >
               {refreshing ? <Spinner /> : <CalendarClock size={17} strokeWidth={1.8} />}
@@ -102,7 +102,7 @@ export default function MobileLeadsPage() {
           {leads.isPending ? (
             <StateBlock kind="loading" />
           ) : leads.isError ? (
-            <StateBlock kind="error" action={<button type="button" className="text-primary" onClick={() => void leads.refetch()}>{t("common.retry")}</button>} />
+            <StateBlock kind="error" action={<button type="button" className="text-accent-ink" onClick={() => void leads.refetch()}>{t("common.retry")}</button>} />
           ) : rows.length === 0 ? (
             <StateBlock kind="empty" title={t("leads.empty")} body={query ? t("leads.noMatches", { q: query }) : undefined} />
           ) : (
@@ -113,8 +113,8 @@ export default function MobileLeadsPage() {
         <button
           type="button"
           onClick={() => navigate("/leads/new")}
-          className="fixed bottom-[100px] grid h-14 w-14 place-items-center rounded-full text-white shadow-card transition active:scale-95"
-          style={{ insetInlineEnd: "max(20px, calc(50% - 175px))", background: "var(--primary)" }}
+          className="fixed bottom-[100px] grid h-14 w-14 place-items-center rounded-full text-on-accent shadow-card transition active:scale-95"
+          style={{ insetInlineEnd: "max(20px, calc(50% - 175px))", background: "var(--color-accent)" }}
           aria-label={t("leads.newLead")}
         >
           <Plus size={24} strokeWidth={2.2} />
@@ -168,7 +168,7 @@ function MobileLeadCard({ lead, onOpen }: { lead: Lead; onOpen: () => void }) {
           target="_blank"
           rel="noreferrer"
           className="flex flex-1 items-center justify-center gap-1.5 rounded-btn py-2 text-[12.5px] font-semibold"
-          style={{ background: "var(--primary-soft)", color: "var(--primary-ink)" }}
+          style={{ background: "var(--color-accent-muted)", color: "var(--color-accent-ink)" }}
         >
           {t("channel.whatsapp")}
         </a>
@@ -183,7 +183,7 @@ function TabButton({ icon, label, active, onClick }: { icon: ReactNode; label: s
       type="button"
       onClick={onClick}
       className="flex h-full flex-col items-center justify-center gap-1 text-[11px] font-semibold transition-colors duration-150"
-      style={{ color: active ? "var(--primary)" : "var(--muted)" }}
+      style={{ color: active ? "var(--color-accent)" : "var(--color-muted)" }}
       aria-current={active ? "page" : undefined}
     >
       {icon}

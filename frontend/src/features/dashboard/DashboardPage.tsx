@@ -53,11 +53,12 @@ interface RecentRow {
 }
 
 const CHANNELS = ["whatsapp", "call", "email", "manual"] as const;
+/** Series order is fixed by ADR-034: 1 = Mantiq Gold, 2 = Network Blue, 3 = Gold Dark, 4 = neutral. */
 const CHANNEL_COLOR: Record<(typeof CHANNELS)[number], string> = {
-  whatsapp: "var(--g-ink)",
-  call: "var(--primary)",
-  email: "var(--a-ink)",
-  manual: "var(--line-2)",
+  whatsapp: "var(--color-chart-1)",
+  call: "var(--color-chart-2)",
+  email: "var(--color-chart-3)",
+  manual: "var(--color-track)",
 };
 
 interface TodayBoard {
@@ -137,7 +138,7 @@ export default function DashboardPage() {
               </div>
               {today.data.overdue_requests?.items?.length ?? 0 === 0 ? <p className="text-[12.5px] text-muted">{t("today.empty")}</p> : null}
               {(today.data.overdue_requests?.items ?? []).map((row) => (
-                <Link key={row.id} to={`/inbox/${row.id}`} className="block py-1 text-[13px] text-primary">
+                <Link key={row.id} to={`/inbox/${row.id}`} className="block py-1 text-[13px] text-accent-ink">
                   #{row.number} — {row.subject}
                 </Link>
               ))}
@@ -148,7 +149,7 @@ export default function DashboardPage() {
               </div>
               {today.data.lead_followups?.items?.length ?? 0 === 0 ? <p className="text-[12.5px] text-muted">{t("today.empty")}</p> : null}
               {(today.data.lead_followups?.items ?? []).map((lead) => (
-                <Link key={lead.id} to={`/leads/${lead.id}`} className="block py-1 text-[13px] text-primary">
+                <Link key={lead.id} to={`/leads/${lead.id}`} className="block py-1 text-[13px] text-accent-ink">
                   {lead.name} — {lead.mobile ?? ""}
                 </Link>
               ))}
@@ -267,13 +268,13 @@ export default function DashboardPage() {
                     <span className="font-semibold text-ink">{t(`status.${row.key}`)}</span>
                     <span className="tabular-nums text-muted">{formatNumber(row.count)}</span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-pill bg-[#EDEFF6]">
+                  <div className="h-2 overflow-hidden rounded-pill bg-track">
                     <div
                       className="h-full rounded-pill transition-all duration-150"
                       style={{
                         width: `${Math.max(2, row.pct)}%`,
                         background:
-                          row.key === "overdue" ? "var(--r-ink)" : row.key === "new" ? "var(--primary)" : "var(--g-ink)",
+                          row.key === "overdue" ? "var(--r-ink)" : row.key === "new" ? "var(--color-accent)" : "var(--g-ink)",
                       }}
                     />
                   </div>
@@ -288,7 +289,7 @@ export default function DashboardPage() {
         <div className="px-[20px] pt-[18px]">
           <SectionTitle
             action={
-              <button type="button" className="text-[13px] font-semibold text-primary hover:underline" onClick={() => navigate("/inbox")}>
+              <button type="button" className="text-[13px] font-semibold text-accent-ink hover:underline" onClick={() => navigate("/inbox")}>
                 {t("nav.inbox")}
               </button>
             }
@@ -308,7 +309,7 @@ export default function DashboardPage() {
                 id: "number",
                 head: t("dashboard.colRequest"),
                 width: 96,
-                render: (row) => <span className="font-bold text-primary">#{row.number}</span>,
+                render: (row) => <span className="font-bold text-accent-ink">#{row.number}</span>,
               },
               { id: "employee", head: t("dashboard.colEmployee"), width: 170, render: (row) => row.employee_name },
               { id: "company", head: t("dashboard.colCompany"), width: 170, render: (row) => row.client_name },
@@ -388,7 +389,7 @@ function Kpi({
                     ? "var(--r-ink)"
                     : hint.tone === "a"
                       ? "var(--a-ink)"
-                      : "var(--muted)",
+                      : "var(--color-muted)",
             }}
           >
             {hint.tone === "g" ? <ArrowUpRight size={14} strokeWidth={2} /> : null}
@@ -408,7 +409,7 @@ function Kpi({
       to={to}
       aria-label={linkLabel}
       data-testid="kpi-overdue-link"
-      className="block h-full rounded-card transition hover:-translate-y-[1px] hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--primary)]"
+      className="block h-full rounded-card transition hover:-translate-y-[1px] hover:shadow-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]"
     >
       {card}
     </Link>
@@ -481,7 +482,7 @@ function NewRequestDialog({ onClose, onCreated }: { onClose: () => void; onCreat
   }
 
   return (
-    <div className="fixed inset-0 z-40 grid place-items-center bg-[rgba(16,24,40,.5)] p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-40 grid place-items-center bg-[rgba(14,23,40,.55)] p-4" role="dialog" aria-modal="true">
       <Card className="w-full max-w-[460px]">
         <SectionTitle>{t("dashboard.newRequest")}</SectionTitle>
         <label className="label" htmlFor="nr-client">

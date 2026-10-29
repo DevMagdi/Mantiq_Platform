@@ -59,7 +59,7 @@ jobs:
       INTEGRATIONS_DRIVER: sim
       CELERY_TASK_ALWAYS_EAGER: "1"
       PYTHONPATH: .
-      LOAD_PASSWORD: Br0kerHub!2026
+      LOAD_PASSWORD: Mantiq!2026
     defaults:
       run:
         working-directory: backend
@@ -160,7 +160,7 @@ jobs:
       PYTHONPATH: .
       LOAD_OUT: /tmp/r8-browser-load.json
       LOAD_MINUTES: ${{ inputs.minutes || '10' }}
-      LOAD_PASSWORD: Br0kerHub!2026
+      LOAD_PASSWORD: Mantiq!2026
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

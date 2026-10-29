@@ -33,7 +33,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    APP_NAME: str = "Broker Hub"
+    APP_NAME: str = "Mantiq"  # R13 brand (ADR-034) — user-visible product name
     ENV: str = "dev"
     DEBUG: bool = True
     API_V1_PREFIX: str = "/api/v1"
@@ -112,8 +112,8 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_ENCRYPTION: str = "none"  # none | starttls | ssl
-    SMTP_FROM_NAME: str = "Broker Hub"
-    EMAIL_FROM: str = "no-reply@brokerhub.local"
+    SMTP_FROM_NAME: str = "Mantiq"  # R13 brand: the e-mail from-name users see
+    EMAIL_FROM: str = "no-reply@mantiq.local"
     SMTP_REPLY_TO: str = ""
 
     # --- SLA defaults (mirrored in DB table sla_policies; DB wins) ---

@@ -6,9 +6,9 @@ from typing import Any
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-ADMIN = "admin@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+ADMIN = "admin@mantiq.test"
+REP_A = "rep_a@mantiq.test"
 PASSWORD = "Test-Pass-2026"
 
 
@@ -26,7 +26,7 @@ async def test_a_manager_adds_a_rep_who_starts_empty(client) -> None:
         created = await client.post(
             "/api/v1/sales-team/members",
             headers=auth,
-            json={"full_name": "بياع جديد", "email": "fresh.rep@brokerhub.test", "role_code": "sales_rep", "mobile": "01112223344"},
+            json={"full_name": "بياع جديد", "email": "fresh.rep@mantiq.test", "role_code": "sales_rep", "mobile": "01112223344"},
         )
         assert created.status_code == 201, created.text
         body = created.json()
@@ -40,7 +40,7 @@ async def test_a_manager_adds_a_rep_who_starts_empty(client) -> None:
         assert set(roles) == {"sales_rep", "sales_manager", "customer_service", "account_manager"}
         assert roles["sales_rep"] == "بياع"
 
-        row = await _member(client, auth, "fresh.rep@brokerhub.test")
+        row = await _member(client, auth, "fresh.rep@mantiq.test")
         assert row["role_name"] == "بياع"  # the badge the list shows comes from the role row, not the slug
         assert row["mobile"] == "+201112223344"
         assert row["open_leads"] == 0
@@ -48,12 +48,12 @@ async def test_a_manager_adds_a_rep_who_starts_empty(client) -> None:
         duplicate = await client.post(
             "/api/v1/sales-team/members",
             headers=auth,
-            json={"full_name": "تكرار", "email": "FRESH.rep@brokerhub.test", "role_code": "sales_rep"},
+            json={"full_name": "تكرار", "email": "FRESH.rep@mantiq.test", "role_code": "sales_rep"},
         )
         assert duplicate.status_code == 409, duplicate.text
 
     # the new seat works, and it starts with no leads: isolation is the default, not a filter
-    async with login(client, "fresh.rep@brokerhub.test", temp) as fresh:
+    async with login(client, "fresh.rep@mantiq.test", temp) as fresh:
         me = (await client.get("/api/v1/auth/me", headers=fresh)).json()
         assert "leads.view_own" in me["permissions"] and "leads.view_all" not in me["permissions"]
         assert (await client.get("/api/v1/leads", headers=fresh)).json()["total"] == 0
@@ -67,7 +67,7 @@ async def test_a_rep_cannot_use_the_team_tab(client) -> None:
         refused = await client.post(
             "/api/v1/sales-team/members",
             headers=auth,
-            json={"full_name": "تسريب", "email": "sneaky@brokerhub.test", "role_code": "sales_rep"},
+            json={"full_name": "تسريب", "email": "sneaky@mantiq.test", "role_code": "sales_rep"},
         )
         assert refused.status_code == 403
         assert set(refused.json()["details"]["missing"]) == {"leads.assign"}
@@ -95,20 +95,20 @@ async def test_a_seat_can_be_moved_and_switched_off(client) -> None:
         created = await client.post(
             "/api/v1/sales-team/members",
             headers=auth,
-            json={"full_name": "زميلة متنقلة", "email": "moving@brokerhub.test", "role_code": "sales_rep", "password": PASSWORD},
+            json={"full_name": "زميلة متنقلة", "email": "moving@mantiq.test", "role_code": "sales_rep", "password": PASSWORD},
         )
         member_id = created.json()["id"]
-        row = await _member(client, auth, "moving@brokerhub.test")
+        row = await _member(client, auth, "moving@mantiq.test")
         assert row["is_active"] is True
 
-    async with login(client, "moving@brokerhub.test") as mover:
+    async with login(client, "moving@mantiq.test") as mover:
         assert (await client.get("/api/v1/leads", headers=mover)).status_code == 200
 
     async with login(client, MANAGER) as auth:
         moved = await client.patch(f"/api/v1/sales-team/members/{member_id}", headers=auth, json={"role_code": "customer_service"})
         assert moved.status_code == 200, moved.text
         assert moved.json()["role"] == "customer_service"
-    async with login(client, "moving@brokerhub.test") as mover:
+    async with login(client, "moving@mantiq.test") as mover:
         # a CS agent reads the inbox but has no business in the pipeline
         assert (await client.get("/api/v1/requests", headers=mover)).status_code == 200
         assert (await client.get("/api/v1/leads", headers=mover)).status_code == 403
@@ -116,14 +116,14 @@ async def test_a_seat_can_be_moved_and_switched_off(client) -> None:
     async with login(client, MANAGER) as auth:
         off = await client.patch(f"/api/v1/sales-team/members/{member_id}", headers=auth, json={"is_active": False})
         assert off.json()["is_active"] is False
-    assert (await client.post("/api/v1/auth/login", json={"email": "moving@brokerhub.test", "password": PASSWORD})).status_code in (
+    assert (await client.post("/api/v1/auth/login", json={"email": "moving@mantiq.test", "password": PASSWORD})).status_code in (
         401,
         403,
     )
     async with login(client, MANAGER) as auth:
         on = await client.patch(f"/api/v1/sales-team/members/{member_id}", headers=auth, json={"is_active": True})
         assert on.json()["is_active"] is True
-    async with login(client, "moving@brokerhub.test"):
+    async with login(client, "moving@mantiq.test"):
         pass  # and the switch is reversible from the same dialog
 
 
@@ -170,12 +170,12 @@ async def test_a_duplicate_email_is_a_conflict_not_a_second_seat(client) -> None
         duplicate = await client.post(
             "/api/v1/sales-team/members",
             headers=auth,
-            json={"full_name": "نسخة من ريب A", "email": "rep_a@brokerhub.test", "role_code": "sales_rep"},
+            json={"full_name": "نسخة من ريب A", "email": "rep_a@mantiq.test", "role_code": "sales_rep"},
         )
         assert duplicate.status_code == 409, duplicate.text
         assert duplicate.json()["code"] == "conflict"
         roster = (await client.get("/api/v1/sales-team/members", headers=auth)).json()
-        assert len([row for row in roster["members"] if row["email"] == "rep_a@brokerhub.test"]) == 1
+        assert len([row for row in roster["members"] if row["email"] == "rep_a@mantiq.test"]) == 1
 
 
 async def test_a_suspended_seat_cannot_log_in_and_the_answer_is_a_forbidden(client) -> None:
@@ -184,19 +184,19 @@ async def test_a_suspended_seat_cannot_log_in_and_the_answer_is_a_forbidden(clie
         created = await client.post(
             "/api/v1/sales-team/members",
             headers=auth,
-            json={"full_name": "مقعد يوقف", "email": "suspended@brokerhub.test", "role_code": "sales_rep", "password": PASSWORD},
+            json={"full_name": "مقعد يوقف", "email": "suspended@mantiq.test", "role_code": "sales_rep", "password": PASSWORD},
         )
         assert created.status_code == 201, created.text
         member_id = created.json()["id"]
         off = await client.patch(f"/api/v1/sales-team/members/{member_id}", headers=auth, json={"is_active": False})
         assert off.status_code == 200, off.text
-    refused = await client.post("/api/v1/auth/login", json={"email": "suspended@brokerhub.test", "password": PASSWORD})
+    refused = await client.post("/api/v1/auth/login", json={"email": "suspended@mantiq.test", "password": PASSWORD})
     assert refused.status_code == 403, refused.text
     assert refused.json()["code"] == "forbidden"
     async with login(client, MANAGER) as auth:
         on = await client.patch(f"/api/v1/sales-team/members/{member_id}", headers=auth, json={"is_active": True})
         assert on.status_code == 200
-    async with login(client, "suspended@brokerhub.test"):
+    async with login(client, "suspended@mantiq.test"):
         pass  # the switch is reversible and the login comes back
 
 
@@ -207,10 +207,10 @@ async def test_a_new_rep_is_isolated_from_everybody_elses_leads(client, ids: dic
         created = await client.post(
             "/api/v1/sales-team/members",
             headers=auth,
-            json={"full_name": "عضو جديد", "email": "isolated@brokerhub.test", "role_code": "sales_rep", "password": PASSWORD},
+            json={"full_name": "عضو جديد", "email": "isolated@mantiq.test", "role_code": "sales_rep", "password": PASSWORD},
         )
         assert created.status_code == 201, created.text
-    async with login(client, "isolated@brokerhub.test") as mine:
+    async with login(client, "isolated@mantiq.test") as mine:
         assert (await client.get(f"/api/v1/leads/{foreign_lead}", headers=mine)).status_code == 404
         assert (await client.get(f"/api/v1/leads/{foreign_lead}/activities", headers=mine)).status_code == 404
         assert (await client.patch(f"/api/v1/leads/{foreign_lead}", headers=mine, json={"status": "lost"})).status_code == 404

@@ -10,9 +10,9 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-ADMIN = "admin@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
 
 
 async def _rows(action: str) -> list[dict]:

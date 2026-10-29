@@ -27,8 +27,8 @@ from typing import Any
 import httpx
 
 BASE = os.environ.get("LOAD_BASE", "http://127.0.0.1:8020")
-EMAIL = os.environ.get("LOAD_MANAGER", "manager@brokerhub.test")
-PASSWORD = os.environ.get("LOAD_PASSWORD", "Br0kerHub!2026")
+EMAIL = os.environ.get("LOAD_MANAGER", "manager@mantiq.test")
+PASSWORD = os.environ.get("LOAD_PASSWORD", "Mantiq!2026")
 
 
 def _pct(values: list[float], q: float) -> float:

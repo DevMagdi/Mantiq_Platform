@@ -38,11 +38,17 @@ _FONT_DIR = Path(__file__).resolve().parent.parent / "assets" / "fonts"
 _REGULAR = "DejaVuSans"
 _BOLD = "DejaVuSans-Bold"
 
-#: ink colours, matching the design tokens closely enough that a printed page and the screen agree
-_INK = HexColor("#0F172A")
-_MUTED = HexColor("#556070")
-_LINE = HexColor("#D8DEE9")
-_ACCENT = HexColor("#0B4F8A")
+#: ink colours — the same values as `frontend/src/styles/tokens.css` (ADR-034), so a printed page and the
+#: screen it came from are the same document. `_ACCENT` is a fill only (the letterhead rule), never body text.
+_INK = HexColor("#16273B")  # Mantiq Navy
+_INK_STRONG = HexColor("#0E1728")  # Deep Navy — the product wordmark
+_MUTED = HexColor("#687380")  # navy at 65% on white — matches --color-muted
+_LINE = HexColor("#E4E7EA")  # rgba(22,39,59,.10) flattened on white
+_ACCENT = HexColor("#BDA77E")  # Mantiq Gold
+_ROW_TINT = HexColor("#FAFBFC")  # --color-bg — the zebra stripe
+_LEGAL_NAME = "Mantiq Technologies"
+#: the mark, rasterised by `frontend/scripts/generate-brand-icons.py` (reportlab cannot read SVG)
+_MARK_PNG = _FONT_DIR.parent / "brand" / "mantiq-mark.png"
 
 
 @lru_cache(maxsize=1)
@@ -115,7 +121,7 @@ class PolicyDocumentData:
     currency: str = "EGP"
     headcount: int | None = None
     payment_plan: str | None = None
-    broker_name: str = "Broker Hub"
+    broker_name: str = "Mantiq"
     broker_contact: str | None = None
     reference: str | None = None
 
@@ -134,9 +140,17 @@ def render_policy_pdf(data: PolicyDocumentData) -> bytes:
     # --- letterhead -------------------------------------------------------------------------
     page.setFillColor(_ACCENT)
     page.rect(0, height - 14, width, 14, stroke=0, fill=1)
-    page.setFillColor(_INK)
+    # mark on the inline-start edge (left for this RTL page's letterhead block), wordmark to its right
+    mark_size = 27
+    if _MARK_PNG.exists():
+        # sits level with the wordmark's cap height, never on the subtitle line below it
+        page.drawImage(str(_MARK_PNG), left, cursor + 1, mark_size, mark_size, mask="auto")
+    page.setFillColor(_INK_STRONG)
     page.setFont(_BOLD, 21)
-    page.drawRightString(right, cursor, _rtl(data.broker_name))
+    page.drawRightString(right, cursor, f"{data.broker_name}")
+    page.setFont(_REGULAR, 9)
+    page.setFillColor(_MUTED)
+    page.drawRightString(right, cursor - 13, _LEGAL_NAME)
     cursor -= 22
     page.setFont(_REGULAR, 11.5)
     page.setFillColor(_MUTED)
@@ -172,7 +186,7 @@ def render_policy_pdf(data: PolicyDocumentData) -> bytes:
     row_height = 30
     for index, (label, value) in enumerate(rows):
         if index % 2 == 0:
-            page.setFillColor(HexColor("#F5F7FB"))
+            page.setFillColor(_ROW_TINT)
             page.rect(left, cursor - 21, right - left, row_height - 6, stroke=0, fill=1)
         page.setFillColor(_MUTED)
         page.setFont(_REGULAR, 10.5)
@@ -204,7 +218,7 @@ def render_policy_pdf(data: PolicyDocumentData) -> bytes:
     page.setFont(_REGULAR, 8.5)
     page.setFillColor(_MUTED)
     page.drawString(left, margin - 8, f"Reference: {data.policy_no}")
-    page.drawRightString(right, margin - 8, _rtl("هذه الوثيقة صادرة إلكترونيًا من منصة الوساطة"))
+    page.drawRightString(right, margin - 8, _rtl(f"هذه الوثيقة صادرة إلكترونيًا — {_LEGAL_NAME}"))
 
     page.showPage()
     page.save()

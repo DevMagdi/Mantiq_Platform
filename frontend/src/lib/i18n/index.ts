@@ -18,6 +18,10 @@ export function applyDirection(lang: Lang) {
   const root = document.documentElement;
   root.lang = lang;
   root.dir = lang === "ar" ? "rtl" : "ltr";
+  // The tab title is brand copy, so it follows the locale like every other string (ADR-034): «منطق»
+  // in Arabic, “Mantiq” in English. index.html carries the Arabic one for the cold, pre-boot paint.
+  const title = i18n.t("common.documentTitle");
+  if (title && title !== "common.documentTitle") document.title = String(title);
 }
 
 export async function setupI18n() {

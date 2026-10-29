@@ -11,8 +11,8 @@ import uuid
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
 
 FLAG = "ai.enabled"
 

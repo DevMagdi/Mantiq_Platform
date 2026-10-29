@@ -293,14 +293,14 @@ function InstallmentsDialog({ policyId, onClose }: { policyId: string; onClose: 
       ) : (
         <>
           {totals ? (
-            <div className="mb-3 grid grid-cols-3 gap-2 rounded-btn bg-[var(--kanban-col)] p-3 text-center">
+            <div className="mb-3 grid grid-cols-3 gap-2 rounded-btn bg-[var(--color-track)] p-3 text-center">
               <div>
                 <p className="text-[11px] text-muted">{t("phase2.totalPaid")}</p>
                 <p className="text-[13px] font-bold tabular-nums text-ink">{formatMoney(totals.paid_amount, plan.data?.policy.currency)}</p>
               </div>
               <div>
                 <p className="text-[11px] text-muted">{t("phase2.totalLate")}</p>
-                <p className="text-[13px] font-bold tabular-nums" style={{ color: totals.late_amount > 0 ? "var(--r-ink)" : "var(--ink)" }}>
+                <p className="text-[13px] font-bold tabular-nums" style={{ color: totals.late_amount > 0 ? "var(--r-ink)" : "var(--color-ink)" }}>
                   {formatMoney(totals.late_amount, plan.data?.policy.currency)}
                 </p>
               </div>

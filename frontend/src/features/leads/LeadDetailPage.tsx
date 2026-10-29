@@ -1,6 +1,6 @@
 /**
  * Screen 9 — lead detail: stepper, needs, timeline, conversion CTA.
- * The convert button is the only way to reach `won` (spec §5.3) and it is green `#05603A`
+ * The convert button is the only way to reach `won` (spec §5.3) and it is green `var(--g-ink)`
  * because it is a money event, not a navigation event.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -135,7 +135,7 @@ export default function LeadDetailPage() {
       <PageHeader
         title={t("leads.leadTitle")}
         subtitle={
-          <button type="button" className="text-primary hover:underline" onClick={() => navigate("/leads")}>
+          <button type="button" className="text-accent-ink hover:underline" onClick={() => navigate("/leads")}>
             {t("leads.allLeads")}
           </button>
         }
@@ -187,7 +187,7 @@ export default function LeadDetailPage() {
               <button
                 type="button"
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-btn px-[18px] py-[11px] text-[14px] font-semibold text-white transition duration-150 disabled:opacity-60"
-                style={{ background: "#05603A" }}
+                style={{ background: "var(--g-ink)" }}
                 onClick={() => setConvertOpen(true)}
                 disabled={convert.isPending}
               >
@@ -221,7 +221,7 @@ export default function LeadDetailPage() {
               <ol className="space-y-3">
                 {(activities.data ?? []).map((row) => (
                   <li key={row.id} className="flex gap-3">
-                    <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--primary-soft)] text-[var(--primary-ink)]">
+                    <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--color-accent-muted)] text-[var(--color-accent-ink)]">
                       {row.type === "call" ? (
                         <PhoneCall size={14} strokeWidth={1.8} />
                       ) : row.type === "meeting" ? (

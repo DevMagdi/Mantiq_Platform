@@ -9438,8 +9438,8 @@
     }
   },
   "info": {
-    "description": "\nBroker Hub — insurance brokerage platform (Phase 1: service desk + leads + client files + portal).\n\n* All list and detail endpoints are **data-scoped on the server**: a sales rep only ever sees their\n  own leads (`assigned_to`) and clients (`account_owner_id`); an id outside the caller's scope is\n  answered with **404**, never 403.\n* Arabic-first API messages are the client's job; codes are stable machine keys.\n* Every non-2xx body is the uniform `ErrorResponse` envelope `{code, message, details}`.\n* Phase 2 groups (`/policies`, `/commissions`, `/issuing-cases`, `/reports/*`) answer\n  `503 feature_disabled` until the `phase2.enabled` flag is on.\n",
-    "title": "Broker Hub API",
+    "description": "\nMantiq (منطق) — insurance brokerage platform (Phase 1: service desk + leads + client files + portal).\n\n* All list and detail endpoints are **data-scoped on the server**: a sales rep only ever sees their\n  own leads (`assigned_to`) and clients (`account_owner_id`); an id outside the caller's scope is\n  answered with **404**, never 403.\n* Arabic-first API messages are the client's job; codes are stable machine keys.\n* Every non-2xx body is the uniform `ErrorResponse` envelope `{code, message, details}`.\n* Phase 2 groups (`/policies`, `/commissions`, `/issuing-cases`, `/reports/*`) answer\n  `503 feature_disabled` until the `phase2.enabled` flag is on.\n",
+    "title": "Mantiq API",
     "version": "0.6.0"
   },
   "openapi": "3.1.0",

@@ -15,9 +15,10 @@
   body {
     @apply bg-bg text-ink font-sans text-base antialiased;
   }
-  /* Focus ring: 2px primary, per spec (never removed, only restyled). */
+  /* Focus ring: 2px gold-dark, per ADR-034 (never removed, only restyled). Gold Dark rather than
+     Mantiq Gold because the ring must clear 3:1 against white; Mantiq Gold is a 2.3:1 fill. */
   :focus-visible {
-    outline: 2px solid var(--primary);
+    outline: 2px solid var(--color-focus);
     outline-offset: 2px;
     border-radius: 6px;
   }
@@ -28,29 +29,36 @@
 
 @layer components {
   .card {
-    @apply rounded-card bg-card shadow-card;
+    @apply rounded-card bg-surface shadow-card;
     padding: 18px 20px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--color-border);
   }
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-btn px-[18px] py-[11px] text-sm font-semibold transition;
   }
+  /* Gold fill, Deep Navy label — the brief's --color-on-accent rule. White on gold fails AA. */
   .btn-primary {
-    @apply btn bg-primary text-white hover:bg-primary-hover;
+    @apply btn;
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+  .btn-primary:hover {
+    background: var(--color-accent-hover);
+    color: var(--color-on-accent);
   }
   .btn-secondary {
-    @apply btn bg-card text-ink;
-    border: 1px solid #c7d2fe;
+    @apply btn bg-surface text-ink;
+    border: 1px solid var(--color-border-strong);
   }
   .btn-ghost {
     @apply btn text-muted hover:text-ink;
   }
   .field {
-    @apply w-full rounded-field border border-line-2 bg-card px-3 py-[10px] text-sm outline-none transition placeholder:text-muted;
+    @apply w-full rounded-field border border-line-2 bg-surface px-3 py-[10px] text-sm outline-none transition placeholder:text-muted;
   }
   .field:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-soft);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-muted);
   }
   .label {
     @apply mb-1 block text-[13px] font-semibold text-ink;
@@ -59,10 +67,20 @@
     @apply text-xs font-semibold uppercase tracking-wide text-muted;
   }
   .row-line {
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--color-border);
   }
   .content-pad {
     @apply px-[30px] py-[24px];
+  }
+  /* Text links and reference numbers on light surfaces: the derived gold ink, not the gold fill
+     (Mantiq Gold on white is 2.3:1 — a fill, never a paragraph). */
+  .link-accent {
+    @apply font-semibold transition;
+    color: var(--color-accent-ink);
+  }
+  .link-accent:hover {
+    color: var(--color-accent-hover);
+    text-decoration: underline;
   }
   /* The shell's header is `sticky top-0 z-20` and 54px tall. Without a scroll margin, anything the
      browser brings to the top edge — a focused control, a row scrolled into view, a tap target Playwright
@@ -88,7 +106,8 @@
 }
 
 .skeleton {
-  @apply rounded-btn bg-[#EDEFF6];
+  @apply rounded-btn;
+  background: var(--color-track);
   animation: pulse 1.4s ease-in-out infinite;
 }
 @keyframes pulse {

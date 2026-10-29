@@ -214,7 +214,7 @@ function MemberDialog({ roles, onClose, onCreated }: { roles: { code: string; na
         }
       >
         <p className="text-[13px] leading-[22px] text-muted">{t("team.issuedNote")}</p>
-        <dl className="mt-3 space-y-2 rounded-card border border-line bg-[var(--kanban-col)] px-3 py-2.5 text-[13px]">
+        <dl className="mt-3 space-y-2 rounded-card border border-line bg-[var(--color-track)] px-3 py-2.5 text-[13px]">
           <div className="flex items-center justify-between gap-3">
             <dt className="text-muted">{t("auth.email")}</dt>
             <dd className="font-semibold text-ink" dir="ltr">
@@ -285,7 +285,7 @@ function MemberDialog({ roles, onClose, onCreated }: { roles: { code: string; na
       />
       <p className="mt-1 text-[11.5px] leading-[18px] text-muted">{t("team.passwordHint")}</p>
 
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-btn bg-[var(--kanban-col)] px-3 py-2">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-btn bg-[var(--color-track)] px-3 py-2">
         <span className="text-[12.5px] font-semibold text-ink">{t("team.activateNow")}</span>
         <Toggle label={t("team.activateNow")} checked={form.is_active} onChange={(next) => setForm({ ...form, is_active: next })} />
       </div>

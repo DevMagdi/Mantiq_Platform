@@ -32,7 +32,7 @@ from app.models.requests import RequestNumberCounter, ServiceRequest
 from sqlalchemy import func, select
 
 RNG = random.Random(20261028)
-PASSWORD = "Br0kerHub!2026"
+PASSWORD = "Mantiq!2026"
 FIRST = ["منى", "كريم", "هبة", "طارق", "سلمى", "أحمد", "نور", "يوسف"]
 LAST = ["عبد الله", "فتحي", "صبري", "الشريف", "منصور", "حسن"]
 COMPANIES = ["النيل", "الدلتا", "الشرق", "المصرية", "الأهرام", "سينا", "برديس", "القناة"]
@@ -50,7 +50,7 @@ async def _extra_reps(session, count: int) -> list[User]:  # type: ignore[no-unt
     role = (await session.execute(select(Role).where(Role.code == "sales_rep"))).scalar_one()
     made: list[User] = []
     for i in range(count):
-        email = f"load.rep{i:02d}@brokerhub.test"
+        email = f"load.rep{i:02d}@mantiq.test"
         existing = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
         if existing is None:
             existing = User(

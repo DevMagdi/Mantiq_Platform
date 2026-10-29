@@ -1,4 +1,4 @@
-"""Broker Hub API application factory."""
+"""Mantiq API application factory (formerly shipped as «Broker Hub» — see ADR-034)."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from app.core.middleware import client_ip, install
 log = get_logger("app")
 
 DESCRIPTION = """
-Broker Hub — insurance brokerage platform (Phase 1: service desk + leads + client files + portal).
+Mantiq (منطق) — insurance brokerage platform (Phase 1: service desk + leads + client files + portal).
 
 * All list and detail endpoints are **data-scoped on the server**: a sales rep only ever sees their
   own leads (`assigned_to`) and clients (`account_owner_id`); an id outside the caller's scope is
@@ -98,7 +98,7 @@ def _decorate_openapi(app: FastAPI) -> None:
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
-        title="Broker Hub API",
+        title="Mantiq API",
         version="0.6.0",
         description=DESCRIPTION,
         lifespan=lifespan,

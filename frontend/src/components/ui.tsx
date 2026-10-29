@@ -126,7 +126,7 @@ export function Avatar({
   name,
   size = 38,
   photo,
-  color = "#C7D2FE",
+  color = "var(--color-accent-muted)",
   className = "",
 }: {
   name: string | null | undefined;
@@ -138,7 +138,7 @@ export function Avatar({
   const style: CSSProperties = { width: size, height: size, background: photo ? undefined : color, fontSize: size * 0.38 };
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-sidebar ${className}`.trim()}
+      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold text-ink-strong ${className}`.trim()}
       style={style}
       aria-hidden="true"
     >
@@ -226,7 +226,7 @@ export function Segmented<T extends string>({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(option.value)}
-            className={`rounded-pill px-3 py-1 text-[13px] font-semibold transition ${active ? "bg-primary text-white" : "text-muted hover:text-ink"}`}
+            className={`rounded-pill px-3 py-1 text-[13px] font-semibold transition ${active ? "bg-accent text-on-accent" : "text-muted hover:text-ink"}`}
           >
             {option.label}
           </button>
@@ -254,15 +254,15 @@ export function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-3 rounded-[10px] px-2 py-1.5 text-start text-[13px] text-ink transition hover:bg-[#F7F8FC] disabled:opacity-60"
+      className="flex w-full items-center justify-between gap-3 rounded-[10px] px-2 py-1.5 text-start text-[13px] text-ink transition hover:bg-track disabled:opacity-60"
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>
       <span
         className="relative inline-block h-[22px] w-[40px] shrink-0 rounded-pill transition"
-        style={{ background: checked ? "var(--primary)" : "var(--line-2)" }}
+        style={{ background: checked ? "var(--color-accent)" : "var(--color-border-strong)" }}
       >
         <span
-          className="absolute top-[3px] block h-4 w-4 rounded-full bg-white shadow transition-all"
+          className="absolute top-[3px] block h-4 w-4 rounded-full bg-surface shadow transition-all"
           style={{ insetInlineStart: checked ? 20 : 3 }}
         />
       </span>
@@ -385,7 +385,7 @@ export function DataTable<T>({
         {rows.map((row) => (
           <tr
             key={keyOf(row)}
-            className="row-line transition hover:bg-[#FAFBFF]"
+            className="row-line transition hover:bg-surface"
             style={
               rowTone
                 ? {

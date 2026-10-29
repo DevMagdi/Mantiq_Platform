@@ -16,10 +16,10 @@ from tests.helpers import PASSWORD, login
 
 pytestmark = pytest.mark.integration
 
-ADMIN = "admin@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
-OWNER = "owner@brokerhub.test"
-REP = "rep_a@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+MANAGER = "manager@mantiq.test"
+OWNER = "owner@mantiq.test"
+REP = "rep_a@mantiq.test"
 
 
 async def _phase2_on(client, admin_headers) -> None:
@@ -48,7 +48,7 @@ async def test_a_username_only_portal_account_logs_in_and_stays_inside_its_compa
         assert body["username"] == username
         assert body["portal_role"] == "owner"
         # the mailbox is a local handle, generated so the row keeps a unique key
-        assert body["email"] == f"{username}@portal.brokerhub.local"
+        assert body["email"] == f"{username}@portal.mantiq.local"
         temp = body["temporary_password"]
         assert temp and len(temp) >= 10, "a temporary password must be shown once, and be usable"
 

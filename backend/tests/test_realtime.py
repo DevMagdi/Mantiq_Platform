@@ -39,9 +39,9 @@ def _fresh_feed() -> Any:
     realtime.hub.reset()
 
 
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
-CS = "cs@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
+CS = "cs@mantiq.test"
 
 
 # ---------------------------------------------------------------------------------------------

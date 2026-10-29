@@ -27,7 +27,7 @@ import { TeamMembersCard } from "./TeamMembersCard";
 const STAGE_ORDER = ["new", "contacted", "meeting_scheduled", "quote_sent", "negotiation"] as const;
 const STAGE_COLOR: Record<string, string> = {
   new: "var(--b-ink)",
-  contacted: "var(--primary)",
+  contacted: "var(--color-accent)",
   meeting_scheduled: "var(--a-ink)",
   quote_sent: "var(--t-ink)",
   negotiation: "var(--g-ink)",
@@ -135,7 +135,7 @@ export default function SalesTeamPage() {
                 {high ? <Badge tone="a">{t("leads.loadHigh")}</Badge> : <Badge tone="g">{t("leads.loadBalanced")}</Badge>}
               </div>
 
-              <div className="mt-4 flex h-[10px] w-full overflow-hidden rounded-pill bg-white">
+              <div className="mt-4 flex h-[10px] w-full overflow-hidden rounded-pill bg-surface">
                 {STAGE_ORDER.map((stage) => {
                   const pct = rep.stages_pct?.[stage] ?? 0;
                   return (
@@ -161,7 +161,7 @@ export default function SalesTeamPage() {
                 </p>
               ) : null}
 
-              <button type="button" className="mt-3 text-[12.5px] font-semibold text-primary hover:underline" onClick={() => navigate(`/leads?rep=${rep.rep_id}`)}>
+              <button type="button" className="mt-3 text-[12.5px] font-semibold text-accent-ink hover:underline" onClick={() => navigate(`/leads?rep=${rep.rep_id}`)}>
                 {t("common.view")}
               </button>
             </Card>
@@ -200,7 +200,7 @@ export default function SalesTeamPage() {
                         checked={picked.includes(lead.id)}
                         onChange={(event) => setPicked(event.target.checked ? [...picked, lead.id] : picked.filter((id) => id !== lead.id))}
                       />
-                      <button type="button" className="truncate font-semibold text-ink hover:text-primary" onClick={() => navigate(`/leads/${lead.id}`)}>
+                      <button type="button" className="truncate font-semibold text-ink hover:text-accent-ink" onClick={() => navigate(`/leads/${lead.id}`)}>
                         {lead.name}
                       </button>
                     </label>
@@ -208,7 +208,7 @@ export default function SalesTeamPage() {
                       <span className="text-muted">{t(`leadStatus.${lead.status}`)}</span>
                       <button
                         type="button"
-                        className="font-semibold text-primary hover:underline"
+                        className="font-semibold text-accent-ink hover:underline"
                         onClick={() => {
                           setPicked([lead.id]);
                           setRedistributing(true);
@@ -249,7 +249,7 @@ export default function SalesTeamPage() {
 
 function Stat({ label, value, icon }: { label: string; value: number | null | undefined; icon?: ReactNode }) {
   return (
-    <div className="rounded-btn bg-white py-2">
+    <div className="rounded-btn bg-surface py-2">
       <dd className="text-[17px] font-bold tabular-nums text-ink">{formatNumber(value ?? 0)}</dd>
       <dt className="mt-0.5 flex items-center justify-center gap-1 text-[11px] text-muted">
         {icon}
@@ -313,7 +313,7 @@ function RedistributeDialog({
         <ul className="space-y-1.5">
           {reps.map((rep) => (
             <li key={rep.rep_id}>
-              <label className="flex cursor-pointer items-center gap-2.5 rounded-btn border border-line px-3 py-2 text-[13px] hover:bg-[#FAFBFF]">
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-btn border border-line px-3 py-2 text-[13px] hover:bg-surface">
                 <input
                   type="checkbox"
                   checked={to.includes(rep.rep_id)}
@@ -343,7 +343,7 @@ function ModeButton({ active, disabled, label, onClick }: { active: boolean; dis
       disabled={disabled}
       onClick={onClick}
       className="flex-1 rounded-btn border px-3 py-2 text-[12.5px] font-semibold transition-colors duration-150 disabled:opacity-50"
-      style={{ borderColor: active ? "var(--primary)" : "var(--line-2)", background: active ? "var(--primary-soft)" : "var(--card)", color: active ? "var(--primary-ink)" : "var(--ink)" }}
+      style={{ borderColor: active ? "var(--color-accent)" : "var(--color-border-strong)", background: active ? "var(--color-accent-muted)" : "var(--card)", color: active ? "var(--color-accent-ink)" : "var(--color-ink)" }}
     >
       {label}
     </button>

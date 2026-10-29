@@ -1,4 +1,4 @@
-# Backend — FastAPI + SQLAlchemy 2 (async)
+# Backend — FastAPI + SQLAlchemy 2 (async) — خدمة منتج Mantiq (منطق)
 
 Python 3.11+, strict typing (`mypy --strict`), Arabic-first responses, one central isolation layer.
 
@@ -13,7 +13,7 @@ app/services/      the rules: leads/convert, requests/SLA/replies, clients/impor
 app/integrations/  provider protocols + real & simulator drivers (WhatsApp, telephony, storage, notify, AI)
 app/api/           serializers (the only place wire shapes are decided) + v1/endpoints/*
 app/workers/       celery_app (beat schedule) + tasks: sla sweep, notifications, imports, media retention
-app/seed.py        deterministic demo data (fictitious people, +201… numbers, @brokerhub.test)
+app/seed.py        deterministic demo data (fictitious people, +201… numbers, @mantiq.test)
 migrations/        alembic — 0001 baseline, 0002 PostgreSQL RLS + partial indexes
 scripts/           export_openapi.py, check_openapi_fresh.py, check_core_coverage.py, smoke_api.py
 tests/             124 tests: auth, isolation matrix, intake/webhooks, leads flow, clients, import, portal,

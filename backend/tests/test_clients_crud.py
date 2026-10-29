@@ -9,10 +9,10 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
-REP_B = "rep_b@brokerhub.test"
-CS = "cs@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
+REP_B = "rep_b@mantiq.test"
+CS = "cs@mantiq.test"
 
 
 async def _audit_rows(action: str) -> list[dict]:

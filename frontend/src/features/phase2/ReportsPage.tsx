@@ -18,13 +18,18 @@ import { formatNumber, formatPercent } from "@/lib/format";
 import type { DashboardChannel, DashboardSummary, InsurerPerformance } from "@/lib/api/views";
 import { Phase2Screen } from "./phase2Gate";
 
-const COMPLIANCE_COLORS = { good: "#10B981", mid: "#F59E0B", bad: "#F04438" } as const;
+/** Status tones live in the token file (ADR-034 §status); this screen only picks a tone by threshold. */
+const COMPLIANCE_TONE = {
+  good: { background: "var(--color-success-bg)", color: "var(--color-success-ink)" },
+  mid: { background: "var(--color-warn-bg)", color: "var(--color-warn-ink)" },
+  bad: { background: "var(--color-danger-bg)", color: "var(--color-danger-ink)" },
+} as const;
 
-function complianceColor(pct: number | null | undefined): string {
+function complianceTone(pct: number | null | undefined): { background: string; color: string } {
   const value = pct ?? 0;
-  if (value >= 90) return COMPLIANCE_COLORS.good;
-  if (value >= 80) return COMPLIANCE_COLORS.mid;
-  return COMPLIANCE_COLORS.bad;
+  if (value >= 90) return COMPLIANCE_TONE.good;
+  if (value >= 80) return COMPLIANCE_TONE.mid;
+  return COMPLIANCE_TONE.bad;
 }
 
 export default function ReportsPage() {
@@ -105,7 +110,7 @@ function ReportsContent() {
                   type="button"
                   onClick={() => setRange(days)}
                   className="rounded-pill px-3 py-1 text-[12.5px] font-semibold transition duration-150"
-                  style={range === days ? { background: "var(--primary)", color: "#fff" } : { color: "var(--muted)" }}
+                  style={range === days ? { background: "var(--color-accent)", color: "var(--color-on-accent)" } : { color: "var(--color-muted)" }}
                   aria-pressed={range === days}
                 >
                   {days === 7 ? t("common.today") : t("phase2.last30")}
@@ -145,21 +150,26 @@ function ReportsContent() {
             <div className="h-[260px]" dir="ltr">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chart} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "var(--muted)" }} axisLine={false} tickLine={false} width={44} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: "var(--color-chart-axis)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "var(--color-chart-axis)" }} axisLine={false} tickLine={false} width={44} />
                   <Tooltip
-                    cursor={{ fill: "var(--primary-soft)" }}
+                    cursor={{ fill: "var(--color-accent-muted)" }}
                     contentStyle={{
                       borderRadius: 12,
-                      border: "1px solid var(--line)",
+                      border: "1px solid var(--color-border)",
                       fontSize: 12,
-                      background: "#fff",
+                      background: "var(--color-surface)",
                     }}
                   />
                   <Bar dataKey="total" radius={[6, 6, 0, 0]} maxBarSize={26}>
                     {chart.map((row) => (
-                      <Cell key={row.day} fill={row.total >= totals.peak * 0.8 ? "var(--primary)" : "var(--primary-soft)"} stroke="var(--primary)" strokeOpacity={0.35} />
+                      <Cell
+                        key={row.day}
+                        fill={row.total >= totals.peak * 0.8 ? "var(--color-chart-1)" : "var(--color-accent-muted)"}
+                        stroke="var(--color-chart-1)"
+                        strokeOpacity={0.35}
+                      />
                     ))}
                   </Bar>
                 </BarChart>
@@ -194,7 +204,7 @@ function ReportsContent() {
                   width: 92,
                   align: "end",
                   render: (row) => (
-                    <span className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[12px] font-bold tabular-nums text-white" style={{ background: complianceColor(row.sla_pct) }}>
+                    <span className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[12px] font-bold tabular-nums" style={complianceTone(row.sla_pct)}>
                       {formatPercent(row.sla_pct ?? null)}
                     </span>
                   ),

@@ -1,32 +1,112 @@
+/*
+ * Mantiq design tokens — the single source of truth for the brand (ADR-034).
+ *
+ * Rule of the house: *content white · accent gold · chrome dark navy*.
+ * This file is the ONLY place a brand colour is written as a hex value. Everything else — Tailwind,
+ * components, inline styles — reads one of these custom properties, so a palette change is one edit and
+ * a stray indigo cannot survive a grep (tests/brand.test.ts enforces that).
+ *
+ * Contrast notes (WCAG 2.1, normal text):
+ *   ink #16273B on white .................. 15.2:1  AA/AAA
+ *   muted #687380 on #FAFBFC .............. 4.8:1   AA
+ *   gold #BDA77E on Deep Navy #0E1728 ..... 7.9:1   AA/AAA  (sidebar active label)
+ *   Deep Navy on gold (--color-on-accent).. 7.9:1   AA/AAA  (primary buttons)
+ *   gold #BDA77E on white ................. 2.3:1   → NEVER text on light; fill/indicator only
+ *   accent-ink #6E5C3B on white ........... 6.1:1   AA      (links/numbers on light)
+ */
 :root {
-  /* Values are the design sheet's (spec §4). Written numbers win over any mockup pixel. */
-  --bg: #f3f4f9;
-  --card: #ffffff;
-  --ink: #101828;
-  --muted: #667085;
-  --line: #eef0f6;
-  --line-2: #e4e7ec;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --sidebar: #0e1424;
-  --sidebar-active: #1c2547;
-  --sidebar-text: #aeb7d0;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-soft: #eef0ff;
-  --primary-ink: #3730a3;
-  --teal: #2dd4bf;
-  --kanban-col: #e9ecf6;
-  --row-warn: #fffaeb;
-  --row-ok: #f4fbf7;
-  /* badges: ink/background pairs from the sheet */
-  --g-bg: #f0fdf4;
-  --g-ink: #05603a;
-  --a-bg: #fffaeb;
-  --a-ink: #92400e;
-  --r-bg: #fef3f2;
-  --r-ink: #b42318;
-  --b-bg: #eff6ff;
-  --b-ink: #175cd3;
-  --t-bg: #ecfdf5;
-  --t-ink: #0f766e;
+  /* ── Brand palette (canonical hex, do not add colours outside this block) ───────────────────── */
+  --color-brand: #16273b; /* Mantiq Navy — ink, headers, brand text on light */
+  --color-brand-deep: #0e1728; /* Deep Navy — sidebar and the darkest chrome */
+  --color-network: #243553; /* Network Blue — sidebar hover, elevated dark surface */
+  --color-gold: #bda77e; /* Mantiq Gold — accent: buttons, active nav, chart series 1 */
+  --color-gold-light: #e3d2a8; /* Gold Light — gradient start / soft gold fill source */
+  --color-gold-dark: #8f7a52; /* Gold Dark — gradient end / pressed / hover */
+  --color-on-dark: #e8e2d4; /* text and icons on navy surfaces */
+
+  /* ── Semantic surface tokens ───────────────────────────────────────────────────────────────── */
+  --color-bg: #fafbfc; /* page background — one neutral, never beige */
+  --color-surface: #ffffff; /* cards, sheets, tables */
+  --color-ink: var(--color-brand); /* body text on light — never #000 */
+  --color-ink-strong: var(--color-brand-deep); /* headings and KPI numerals */
+  --color-muted: #687380; /* Mantiq Navy at 65% over white — 4.8:1 on --color-bg */
+  --color-border: rgba(22, 39, 59, 0.1); /* card/surface hairline */
+  --color-border-strong: rgba(22, 39, 59, 0.16); /* inputs, dividers that must read as a line */
+  --color-track: rgba(22, 39, 59, 0.08); /* progress tracks, skeletons, kanban wells */
+
+  /* ── Sidebar / dark chrome ─────────────────────────────────────────────────────────────────── */
+  --color-sidebar: var(--color-brand-deep);
+  --color-sidebar-text: var(--color-on-dark);
+  --color-sidebar-active: var(--color-gold); /* active nav label + inline-start indicator */
+  --color-sidebar-active-bg: rgba(189, 167, 126, 0.14); /* soft gold fill on navy */
+  --color-sidebar-hover: var(--color-network);
+  --color-sidebar-muted: rgba(232, 226, 212, 0.62); /* section labels on navy */
+  --color-sidebar-line: rgba(232, 226, 212, 0.12);
+
+  /* ── Accent ──────────────────────────────────────────────────────────────────────────────────── */
+  --color-accent: var(--color-gold);
+  --color-accent-hover: var(--color-gold-dark);
+  --color-accent-muted: rgba(227, 210, 168, 0.12); /* Gold Light, ≤12% on light surfaces */
+  --color-accent-ink: #6e5c3b; /* derived gold ink for text on light — 6.1:1 */
+  --color-on-accent: var(--color-brand-deep); /* label on a gold button — NOT white */
+  --color-focus: var(--color-gold-dark); /* 4.1:1 vs white — a gold ring that is visible */
+
+  /* ── Data viz (series order is fixed: gold, network, gold-dark) ────────────────────────────── */
+  --color-chart-1: var(--color-gold);
+  --color-chart-2: var(--color-network);
+  --color-chart-3: var(--color-gold-dark);
+  --color-chart-grid: rgba(22, 39, 59, 0.08);
+  --color-chart-axis: var(--color-muted);
+
+  /* ── Status (recalibrated for white + navy: no neon) ──────────────────────────────────────── */
+  --color-success-bg: #eef6f0;
+  --color-success-ink: #1b5e3a; /* 7.0:1 on its own fill */
+  --color-warn-bg: #fdf6ea;
+  --color-warn-ink: #8a5a12; /* 5.4:1 */
+  --color-danger-bg: #fdf0ef;
+  --color-danger-ink: #a32a22; /* 6.5:1 */
+  --color-info-bg: #edf2f9;
+  --color-info-ink: #1f4e8c; /* 7.4:1 */
+  --color-neutral-bg: #ecf3f4;
+  --color-neutral-ink: #17565f; /* 7.3:1 */
+
+  /* ── Logo mark gradient (mark only — never a surface wash) ────────────────────────────────── */
+  --gradient-mark: linear-gradient(135deg, var(--color-gold-light) 0%, var(--color-gold) 52%, var(--color-gold-dark) 100%);
+
+  /* ── Elevation ─────────────────────────────────────────────────────────────────────────────── */
+  --shadow: 0 1px 2px rgba(14, 23, 40, 0.06);
+  --shadow-pop: 0 12px 32px rgba(14, 23, 40, 0.12);
+
+  /* ══ Legacy aliases ═══════════════════════════════════════════════════════════════════════════
+   * The names the screens already use (`--primary`, `--bg`, `--sidebar`, …). They are ALIASES,
+   * not a second palette: each one points at a semantic token above, so there is exactly one hex
+   * per colour in this file and no "dual conflicting value" can drift.
+   */
+  --bg: var(--color-bg);
+  --card: var(--color-surface);
+  --ink: var(--color-ink);
+  --muted: var(--color-muted);
+  --line: var(--color-border);
+  --line-2: var(--color-border-strong);
+  --sidebar: var(--color-sidebar);
+  --sidebar-active: var(--color-sidebar-active-bg);
+  --sidebar-text: var(--color-sidebar-text);
+  --primary: var(--color-accent);
+  --primary-hover: var(--color-accent-hover);
+  --primary-soft: var(--color-accent-muted);
+  --primary-ink: var(--color-accent-ink);
+  --teal: var(--color-accent); /* the login panel's tick marks: gold on navy */
+  --kanban-col: var(--color-track);
+  --row-warn: var(--color-warn-bg);
+  --row-ok: var(--color-success-bg);
+  --g-bg: var(--color-success-bg);
+  --g-ink: var(--color-success-ink);
+  --a-bg: var(--color-warn-bg);
+  --a-ink: var(--color-warn-ink);
+  --r-bg: var(--color-danger-bg);
+  --r-ink: var(--color-danger-ink);
+  --b-bg: var(--color-info-bg);
+  --b-ink: var(--color-info-ink);
+  --t-bg: var(--color-neutral-bg);
+  --t-ink: var(--color-neutral-ink);
 }

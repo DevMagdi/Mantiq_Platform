@@ -13,10 +13,10 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-ADMIN = "admin@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
-CS = "cs@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
+CS = "cs@mantiq.test"
 
 
 async def test_dashboard_kpis_follow_the_scope(client, ids: dict[str, dict[str, str]]) -> None:

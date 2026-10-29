@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from tests.conftest import IS_POSTGRES, PASSWORD, TEST_DB, TEST_URL
 from tests.test_realtime import served_app
 
-MANAGER = "manager@brokerhub.test"
+MANAGER = "manager@mantiq.test"
 #: long enough to be unmistakable next to a millisecond query, short enough to keep the suite quick
 HASH_WINDOW_S = 1.0
 

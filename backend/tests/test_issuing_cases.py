@@ -21,8 +21,8 @@ from sqlalchemy import select
 from tests.conftest import PASSWORD
 from tests.helpers import login
 
-ADMIN = "admin@brokerhub.test"
-SCOPED = "scoped@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+SCOPED = "scoped@mantiq.test"
 
 
 async def _enable_phase2() -> None:

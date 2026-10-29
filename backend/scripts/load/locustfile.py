@@ -27,9 +27,9 @@ from typing import Any
 
 from locust import HttpUser, between, events, task
 
-PASSWORD = os.environ.get("LOAD_PASSWORD", "Br0kerHub!2026")
-MANAGER = os.environ.get("LOAD_MANAGER", "manager@brokerhub.test")
-CS = os.environ.get("LOAD_CS", "cs@brokerhub.test")
+PASSWORD = os.environ.get("LOAD_PASSWORD", "Mantiq!2026")
+MANAGER = os.environ.get("LOAD_MANAGER", "manager@mantiq.test")
+CS = os.environ.get("LOAD_CS", "cs@mantiq.test")
 REP_COUNT = int(os.environ.get("LOAD_REP_COUNT", "10"))
 PORTAL = os.environ.get("LOAD_PORTAL", "owner.mantiq@company.test")
 
@@ -57,7 +57,7 @@ def _weight(role: str) -> int:
 
 
 def _rep_email() -> str:
-    return f"load.rep{random.randint(0, REP_COUNT - 1):02d}@brokerhub.test"
+    return f"load.rep{random.randint(0, REP_COUNT - 1):02d}@mantiq.test"
 
 
 class Brokered(HttpUser):

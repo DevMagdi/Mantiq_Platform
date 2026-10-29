@@ -99,7 +99,7 @@ test.describe("dashboard (screen 1)", () => {
       await expect(nav.getByText(item, { exact: true }).first()).toBeVisible();
     }
     await expect(nav.locator(".rounded-pill")).toHaveCount(1); // exactly one pill: the open-requests count
-    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(243, 244, 249)");
+    await expect(page.locator("body")).toHaveCSS("background-color", "rgb(250, 251, 252)"); // --color-bg #FAFBFC (ADR-034)
 
     // the pill is that number, or 99+ — never the design sheet's fixed "24"
     const pill = nav.locator(".rounded-pill");
