@@ -253,7 +253,7 @@ def _brand(workbook: Workbook, sheet: str) -> None:
     workbook.properties.creator = _PRINT_HEADER
     workbook.properties.title = f"{_PRINT_HEADER} — {sheet}"
     sheet_props = workbook.worksheets[0]
-    sheet_props.oddHeader.center.text = f"&\"IBM Plex Sans Arabic,Bold\"{_PRINT_HEADER}"
+    sheet_props.oddHeader.center.text = f'&"IBM Plex Sans Arabic,Bold"{_PRINT_HEADER}'
     sheet_props.oddHeader.center.size = 9
     sheet_props.oddFooter.right.text = f"{sheet} · &D"
     sheet_props.oddFooter.right.size = 8

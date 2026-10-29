@@ -81,6 +81,11 @@ PROVIDER_FIELDS: dict[str, tuple[FieldSpec, ...]] = {
     "whatsapp": (
         FieldSpec("phone_number_id", required_for_live=True),
         FieldSpec("business_account_id"),
+        #: Meta's App ID — not a secret, and not required to *live*: a provider that already sends and verifies
+        #: works without it. It is required for the **connection test** to be meaningful (`debug_token` needs
+        #: `app_id|app_secret`, and without them Meta answers "(#100) … app access token"), so its absence shows
+        #: as a failed test with the fix in the message rather than as a blocked switch.
+        FieldSpec("app_id"),
         FieldSpec("receive_media", "bool", True),
     ),
     #: Mobile phone calls (R9 §1.C). The key stays `telephony` — it is a stored contract and every existing
@@ -129,6 +134,7 @@ ENV_FALLBACK: dict[str, dict[str, str]] = {
         "verify_token": "WHATSAPP_VERIFY_TOKEN",
         "phone_number_id": "WHATSAPP_PHONE_NUMBER_ID",
         "business_account_id": "WHATSAPP_BUSINESS_ACCOUNT_ID",
+        "app_id": "WHATSAPP_APP_ID",
     },
     "telephony": {
         "provider_url": "TELEPHONY_WEBHOOK_URL",
@@ -371,7 +377,11 @@ async def state(session: AsyncSession, provider: str) -> State:
         .first()
     )
     out.last_webhook_at = latest_ok.occurred_at.astimezone(UTC).isoformat() if latest_ok else None
-    out.last_error = (latest_err.detail or latest_err.status) if latest_err else None
+    # A *stale* error is not an error. A handshake rejected before the operator pasted the right verify token
+    # stayed on the card forever: the fix worked, the screen kept saying it had not. The error is reported only
+    # while it is the newest thing that happened for this provider — a later success retires it.
+    error_is_current = latest_err is not None and (latest_ok is None or latest_err.occurred_at > latest_ok.occurred_at)
+    out.last_error = (latest_err.detail or latest_err.status) if latest_err and error_is_current else None
     out.connection_status = "error" if out.last_test_status == "failed" else ("connected" if not missing else "not_connected")
     return out
 
@@ -544,6 +554,7 @@ def _mask_dict(provider: str, values: dict[str, Any]) -> dict[str, Any]:
 FIELD_LABELS: dict[str, str] = {
     "phone_number_id": "معرّف رقم واتساب (Phone Number ID)",
     "business_account_id": "معرّف حساب واتساب للأعمال (WABA ID)",
+    "app_id": "معرّف تطبيق ميتا (App ID)",
     "access_token": "توكين الوصول (Access Token)",
     "app_secret": "التوقيع السري لتطبيق ميتا (App Secret)",
     "verify_token": "توكين التحقق من الـwebhook (Verify Token)",
@@ -915,29 +926,108 @@ def _assert_provider(provider: str) -> None:
 # ---------------------------------------------------------------------------------------------
 
 
+#: Meta rejects a token that expires sooner than this for anything but a short trial; the operator needs to
+#: know *before* the campaign, not from a queue of failed sends at 3 a.m.
+_TEMP_TOKEN_DAYS = 7
+
+
+def _is_dev_placeholder_secret(value: str) -> bool:
+    """True for a secret the repository publishes (see `core/config.py::DEV_PLACEHOLDER_SECRETS`).
+
+    Asking Meta to introspect a token with a placeholder App Secret produces "(#100) You must provide an app
+    access token…" — an error about *our* credentials that reads like an error about *Meta's*. Refusing
+    locally, before any request leaves the process, turns a misleading answer into an actionable one.
+    """
+    from app.core.config import DEV_PLACEHOLDER_SECRETS
+
+    return (value or "") in set(DEV_PLACEHOLDER_SECRETS.values())
+
+
 async def _test_whatsapp(resolved: ResolvedIntegration) -> TestOutcome:
-    """Meta's own token introspection: proves the credential is alive without messaging a customer."""
+    """Prove the whole Meta contract from the credentials we hold: the token, the app it belongs to, the number.
+
+    Two calls, because one is not enough any more:
+
+    1. `GET /debug_token` — the token is alive and belongs to the App ID the operator typed. It needs
+       `access_token=app_id|app_secret` (an "app access token"): with `input_token` alone Meta answers
+       "(#100) You must provide an app access token, or a user access token that is an owner or developer of
+       the app", which says nothing about the token under test. `data.app_id` is the app the token was minted
+       for, so a mismatch means the operator pasted a token from a *different* Meta app.
+    2. `GET /{phone_number_id}` — the token can actually reach the sending number. `debug_token` never returns
+       a phone id (that comparison here used to be dead code); the only honest way to check the number is to
+       ask for it, and it is the call the send path makes anyway.
+    """
     import httpx
+
+    from app.integrations.whatsapp import _client, graph_base
 
     token = resolved.secret("access_token")
     phone_id = resolved.value("phone_number_id")
+    app_id = resolved.value("app_id")
+    app_secret = resolved.secret("app_secret")
     if not token or not phone_id:
         return TestOutcome(False, "ناقص: access_token وphone_number_id مطلوبان في الوضع الحيّ")
+    # Fail before the network: a placeholder secret is *our* misconfiguration, and Meta's answer to it names the
+    # wrong problem. The message has to say where the real value comes from, or the next attempt repeats this.
+    if not app_secret or _is_dev_placeholder_secret(app_secret):
+        return TestOutcome(
+            False,
+            "App Secret غير محفوظ أو ما زال قيمة تطوير — احفظ App Secret الحقيقي من Meta: "
+            "App settings ← Basic ← App Secret، ثم أعد الاختبار.",
+        )
+
+    base = graph_base()
+    # `app_id|app_secret` is Meta's "app access token". Without a saved App ID the stored token is the only
+    # thing we can present — and Meta will refuse it for an app the caller does not own. That is the correct
+    # outcome to report, not a crash: the message tells the operator to enter the App ID.
+    app_token = f"{app_id}|{app_secret}" if app_id else token
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            response = await client.get("https://graph.facebook.com/v21.0/debug_token", params={"input_token": token})
+        async with _client(timeout=15) as client:
+            debug = await client.get(f"{base}/debug_token", params={"input_token": token, "access_token": app_token})
+            if debug.status_code >= 400:
+                return TestOutcome(
+                    False,
+                    f"Meta رفض فحص التوكن ({debug.status_code}): {debug.text[:220]}"
+                    + ("" if app_id else " — أدخل App ID في الإعدادات ليقبل Meta طلب الفحص."),
+                )
+            data = (debug.json() or {}).get("data") or {}
+            if not data.get("is_valid"):
+                return TestOutcome(False, "الـToken غير صالح — منتهي أو ملغى من App dashboard")
+            if app_id and str(data.get("app_id") or "") != str(app_id):
+                return TestOutcome(
+                    False,
+                    f"الـToken يخصّ تطبيقًا آخر: App ID للتوكن {data.get('app_id') or 'غير معروف'} ≠ App ID المحفوظ {app_id}",
+                )
+            probe = await client.get(
+                f"{base}/{phone_id}",
+                params={"fields": "display_phone_number,verified_name"},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if probe.status_code >= 400:
+                return TestOutcome(
+                    False,
+                    f"Meta رفض قراءة الرقم ({probe.status_code}): {probe.text[:220]}",
+                )
+            number = probe.json() or {}
     except httpx.HTTPError as exc:
         return TestOutcome(False, f"تعذّر الوصول إلى graph.facebook.com: {type(exc).__name__}")
-    if response.status_code >= 400:
-        return TestOutcome(False, f"Meta رفض الفحص ({response.status_code}): {response.text[:220]}")
-    data = (response.json() or {}).get("data") or {}
-    if not data.get("is_valid"):
-        return TestOutcome(False, "الـToken غير صالح — منتهي أو ملغى من App dashboard")
-    if data.get("phone_number_id") and str(data["phone_number_id"]) != str(phone_id):
-        return TestOutcome(False, f"الـToken يخصّ رقمًا آخر: {data['phone_number_id']} ≠ {phone_id}")
-    app_name = data.get("application") or {}
-    label = app_name.get("name") if isinstance(app_name, dict) else str(app_name)
-    return TestOutcome(True, f"الاتصال سليم — Number ID {phone_id}" + (f"، التطبيق {label}" if label else ""))
+
+    label = str(number.get("verified_name") or "").strip()
+    display = str(number.get("display_phone_number") or "").strip()
+    # Two independent facts in one sentence: *which* number answered (verified name + display number), so a
+    # token pointed at the wrong WABA is visible on the card instead of only inside a customer complaint.
+    detail = "الاتصال سليم — " + (label or "رقم غير مُسمّى")
+    if display:
+        detail += f" ({display})"
+    detail += f"، Phone Number ID {phone_id}"
+    expires = data.get("expires_at")
+    if isinstance(expires, (int, float)) and 0 < expires - time.time() < _TEMP_TOKEN_DAYS * 86400:
+        days = max(1, int((expires - time.time()) // 86400))
+        detail += (
+            f" — تنبيه: هذا توكن مؤقت ينتهي خلال {days} يوم؛ استخدم توكن System User دائم "
+            "من Business Settings (صلاحيات whatsapp_business_messaging وwhatsapp_business_management)."
+        )
+    return TestOutcome(True, detail)
 
 
 async def _test_mobile_calls(resolved: ResolvedIntegration) -> TestOutcome:
@@ -1028,10 +1118,12 @@ def _smtp_probe(
 async def _fetch_meta_templates(account: str, token: str) -> tuple[list[dict[str, Any]], str]:
     import httpx
 
+    from app.integrations.whatsapp import _client, graph_base
+
     try:
-        async with httpx.AsyncClient(timeout=20) as client:
+        async with _client(timeout=20) as client:
             response = await client.get(
-                f"https://graph.facebook.com/v21.0/{account}/message_templates",
+                f"{graph_base()}/{account}/message_templates",
                 params={"fields": "name,language,status,category", "limit": 100},
                 headers={"Authorization": f"Bearer {token}"},
             )

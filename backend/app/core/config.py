@@ -91,6 +91,13 @@ class Settings(BaseSettings):
     WHATSAPP_APP_SECRET: str = "dev-app-secret"
     WHATSAPP_VERIFY_TOKEN: str = "dev-verify-token"
     WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
+    #: The Meta *App ID* (App dashboard → Settings → Basic). It is not a secret: it is the public half of the
+    #: `app_id|app_secret` pair the `debug_token` endpoint demands. Without it the token introspection is
+    #: refused with "(#100) You must provide an app access token…" even when the token being tested is valid.
+    WHATSAPP_APP_ID: str = ""
+    #: One Graph version for the whole backend. Meta retires a version after ~two years (v21.0 on 2027-01-21),
+    #: and a version pinned in three files is a version that gets bumped in two of them.
+    WHATSAPP_GRAPH_VERSION: str = "v25.0"
     # Mobile phone calls provider (a VoIP/mobile-call gateway that signs its webhook with HMAC).
     # `twilio` is the documented live dialect (Programmable Voice); `generic` is the JSON contract.
     TELEPHONY_PROVIDER: str = "twilio"  # twilio | generic
@@ -218,17 +225,10 @@ class Settings(BaseSettings):
             unsafe = [
                 origin
                 for origin in origins
-                if origin == "*"
-                or "localhost" in origin
-                or "127.0.0.1" in origin
-                or "//[::1]" in origin
-                or origin.startswith("http://")
+                if origin == "*" or "localhost" in origin or "127.0.0.1" in origin or "//[::1]" in origin or origin.startswith("http://")
             ]
             if unsafe:
-                problems.append(
-                    "CORS_ORIGINS must be the real https origin(s) with ENV=prod; refused: "
-                    + ", ".join(unsafe)
-                )
+                problems.append("CORS_ORIGINS must be the real https origin(s) with ENV=prod; refused: " + ", ".join(unsafe))
 
         if len(self.SECRETS_ENCRYPTION_KEY.strip()) < 16:
             problems.append(
@@ -275,15 +275,13 @@ class Settings(BaseSettings):
 
         if problems:
             raise ValueError(
-                "Refusing to start with ENV=prod — fix these settings first:\n"
-                + "\n".join(f"  - {problem}" for problem in problems)
+                "Refusing to start with ENV=prod — fix these settings first:\n" + "\n".join(f"  - {problem}" for problem in problems)
             )
 
         for field_name, placeholder in DEV_PLACEHOLDER_SECRETS.items():
             if getattr(self, field_name) == placeholder:
                 setattr(self, field_name, "")
         return self
-
 
     @property
     def is_production(self) -> bool:

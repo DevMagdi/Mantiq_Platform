@@ -51,7 +51,7 @@ def test_the_openapi_metadata_says_mantiq() -> None:
 
     assert get_settings().APP_NAME == "Mantiq"
     main_source = (APP / "main.py").read_text(encoding="utf-8")
-    assert 'title="Mantiq API"' in main_source or "title=f\"{settings.APP_NAME}" in main_source
+    assert 'title="Mantiq API"' in main_source or 'title=f"{settings.APP_NAME}' in main_source
 
 
 def test_the_document_and_export_headers_say_mantiq() -> None:

@@ -645,6 +645,7 @@ export const en: Messages = {
     field: {
       phone_number_id: "Phone Number ID",
       business_account_id: "Business Account ID",
+      app_id: "App ID (Meta application ID)",
       receive_media: "Receive media (voice notes and attachments)",
       provider: "Driver",
       recording_retention_days: "Recording retention (days)",

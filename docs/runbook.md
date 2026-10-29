@@ -210,14 +210,33 @@ ADR-016)، وبعد أي حفظ تُشغَّل `registry.prime()` — أي أن 
    (و`message_template_status_update` إن كنت تستخدم القوالب). Meta تُرسل `GET` أولاً:
    - `hub.mode=subscribe`، `hub.verify_token`، `hub.challenge`؛ نردّ نص الـchallenge كما هو.
    - أي فشل يُكتب في `webhook_events` كـ`event_type=verification, status=rejected` مع السبب.
-7. **الحقول في الشاشة**: Phone Number ID، WABA ID، Access Token (سري، يُخزَّن مشفّراً ولا يُعاد)، Verify
-   Token (سري)، App Secret (سري). الشهادة بجانب البطاقة: `Live` / «جاهز» / «غير مُعد».
-8. **اختبار الاتصال** يضرب `graph.facebook.com/debug_token` بالتوكن المحفوظ ويقول إن كان صالحاً ولمن.
+7. **App ID**: من *Settings → Basic → App ID* (رقم عام، ليس سرًّا). يُحفظ في حقل **App ID** في `/settings`.
+   بدونه يرفض Meta فحص التوكن برسالة `(#100) You must provide an app access token…` — الرسالة تتكلّم عن
+   اعتماد *لنا* لا عن صلاحية التوكن، ولهذا كان الاختبار يفشل على توكن سليم.
+8. **الحقول في الشاشة**: Phone Number ID، WABA ID، **App ID**، Access Token (سري، يُخزَّن مشفّراً ولا يُعاد)،
+   Verify Token (سري)، App Secret (سري). الشهادة بجانب البطاقة: `Live` / «جاهز» / «غير مُعد».
+9. **اختبار الاتصال** — نداءان حقيقيان، وكلاهما عبر نفس عميل `integrations/whatsapp.py`:
+  1. `GET {GRAPH}/debug_token` بمعاملين: `input_token=<التوكن المحفوظ>` و`access_token=<App ID>|<App Secret>`
+     (هذا هو "app access token" الذي يطلبه Meta). بلا App ID محفوظ يُرسَل التوكن نفسه بدلاً منه، وتقول
+     الرسالة إن الحل هو إدخال App ID. إن اختلف `data.app_id` عن App ID المحفوظ يفشل الاختبار ويسمّي
+     المعرّفين معاً — أي أن التوكن يخصّ تطبيقًا آخر.
+  2. `GET {GRAPH}/{phone_number_id}?fields=display_phone_number,verified_name` بتوكن Bearer. هذه هي
+     الطريقة الوحيدة للتأكد أن التوكن يصل إلى *رقم الإرسال*؛ `debug_token` لا يُرجع `phone_number_id`
+     إطلاقًا (المقارنة القديمة كانت كودًا ميتًا). النجاح يطبع الاسم الموثّق والرقم الظاهر.
+  - **قبل أي نداء**: إن كان App Secret فارغًا أو ما زال قيمة التطوير (`dev-app-secret`) يفشل الاختبار
+    محليًا بلا شبكة، ويقول: احفظ App Secret الحقيقي من *App settings → Basic*.
+  - توكن ينتهي خلال ٧ أيام يبقى «ناجحًا» ومعه تنبيه أنه مؤقت وأن المطلوب توكن System User دائم.
+
+`GRAPH` أعلاه = `https://graph.facebook.com/<WHATSAPP_GRAPH_VERSION>`؛ الإصدار **متغيّر بيئة واحد**
+(`WHATSAPP_GRAPH_VERSION`، الافتراضي `v25.0`) يقرأه `integrations/whatsapp.py::graph_base()` ويستعمله
+اختبار الاتصال ومزامنة القوالب والإرسال. لا يوجد إصدار مكتوب داخل الكود: ترقية Graph تغيير بيئة، لا تعديل
+ثلاثة ملفات وإغفال رابع. (`v21.0` السابق كان ينتهي في 2027-01-21.)
 
 اختبار سريع للرد الخارجي (بعد حفظ الأسرار، و`INTEGRATIONS_DRIVER=live`):
 
 ```bash
-curl -sS -X POST "https://graph.facebook.com/v21.0/<PHONE_NUMBER_ID>/messages" \
+# الإصدار أدناه هو نفسه WHATSAPP_GRAPH_VERSION؛ إن رقّيته في البيئة رقّه هنا أيضًا
+curl -sS -X POST "https://graph.facebook.com/v25.0/<PHONE_NUMBER_ID>/messages" \
   -H "Authorization: Bearer <ACCESS_TOKEN>" -H "Content-Type: application/json" \
   -d '{"messaging_product":"whatsapp","to":"201012345678","type":"text","text":{"body":"اختبار من وسيط"}}'
 # المتوقع: {"messages":[{"id":"wamid...", ...}]} — وهذا الـwamid هو ما يظهر في خيط الطلب كـexternal_id
@@ -316,7 +335,8 @@ curl -sS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/v1/settings
 
 **ما لا يُدّعى:** لا يوجد في هذه الجولة حساب Meta ولا حساب مزوّد مكالمات موبايل حقيقي ولا رقم مرخّص،
 فالاتصال الفعلي بمزود خارجي **لم يُجرَّب**. ما يلزم من المشغّل قبل أول مكالمة/رسالة حقيقية:
-`WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_APP_SECRET` + `WHATSAPP_VERIFY_TOKEN`،
+`WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_PHONE_NUMBER_ID` + `WHATSAPP_APP_SECRET` + `WHATSAPP_VERIFY_TOKEN` +
+`WHATSAPP_APP_ID` (لاختبار الاتصال) + `WHATSAPP_GRAPH_VERSION` (إصدار Graph، الافتراضي `v25.0`)،
 و`TELEPHONY_WEBHOOK_SECRET` + `TELEPHONY_WEBHOOK_URL` + رقم الموبايل. بلا هذه القيم في `ENV=prod` لا تقلع
 العملية أصلًا (R9). المثبت أن مسار `live` كامل ومختبَر بعقد: توقيع HMAC على البايتات الخام، رفض التوقيع
 الخاطئ، منع التكرار (idempotency)، وحصر مضيف التسجيل (SSRF) — `tests/test_live_channels.py` و

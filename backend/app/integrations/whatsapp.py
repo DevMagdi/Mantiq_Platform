@@ -22,6 +22,19 @@ from app.integrations.base import ProviderResult
 
 log = get_logger("integrations.whatsapp")
 
+
+def graph_base() -> str:
+    """The one Graph root the backend talks to: `https://graph.facebook.com/<version>`.
+
+    Meta retires a Graph version roughly every two years and answers a retired one with an error that names
+    *the version*, not the caller. The version therefore lives in `WHATSAPP_GRAPH_VERSION` and is read here —
+    this module, the connection test and the template sync all call this function, so bumping a version is an
+    environment change, never a three-file edit that misses one.
+    """
+    version = (get_settings().WHATSAPP_GRAPH_VERSION or "").strip().strip("/") or "v25.0"
+    return f"https://graph.facebook.com/{version}"
+
+
 #: `None` means the real network. A contract test sets a `httpx.MockTransport` so the *live* code path
 #: (URL, bearer token, payload shape, error mapping) is what runs — swapping the driver for the simulator
 #: would assert nothing about the code that ships.
@@ -37,8 +50,12 @@ def _client(timeout: float = 15.0) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout, transport=_transport)
 
 
+class MediaFetchError(RuntimeError):
+    """A provider media object could not be read. Caught by the webhook, recorded, and the message still lands."""
+
+
 class WhatsAppMeta:
-    """Meta WhatsApp Business Cloud API (v21+).
+    """Meta WhatsApp Business Cloud API (Graph version from `WHATSAPP_GRAPH_VERSION`).
 
     Credentials arrive from `integrations/registry.py`, which reads the saved settings row and falls back
     to the environment — so the repo and the container env stay secret-free either way. An empty
@@ -46,7 +63,12 @@ class WhatsAppMeta:
     """
 
     name = "meta"
-    BASE = "https://graph.facebook.com/v21.0"
+
+    #: kept as a property, not a class attribute: a class attribute is read at import time, which freezes
+    #: whatever the version was when the module loaded (and makes an env override invisible to a test)
+    @property
+    def BASE(self) -> str:  # noqa: N802 — the name is part of the driver's public shape
+        return graph_base()
 
     def __init__(self, token: str, phone_number_id: str, app_secret: str = "") -> None:
         self.token = token
@@ -117,11 +139,25 @@ class WhatsAppMeta:
         return ProviderResult(ok=True, external_id=data.get("messages", [{}])[0].get("id")).as_dict()
 
     async def fetch_media(self, media_id: str) -> tuple[bytes, str]:
+        """Two GETs: the media descriptor (which carries a short-lived URL + the mime), then the bytes.
+
+        Every non-2xx raises instead of being parsed. The old shape called `.json()` on whatever came back and
+        then `get("url", "")` — so a 401 produced `url = ""`, the second request hit the *empty* URL, and the
+        failure surfaced as an unrelated exception (or, worse, as zero bytes stored as a real attachment).
+        The caller is the webhook, which catches this: one unreadable file must never cost the whole batch.
+        """
         async with _client(timeout=30) as client:
-            meta = (await client.get(f"{self.BASE}/{media_id}", headers={"Authorization": f"Bearer {self.token}"})).json()
-            url = meta.get("url", "")
+            meta_response = await client.get(f"{self.BASE}/{media_id}", headers={"Authorization": f"Bearer {self.token}"})
+            if meta_response.status_code >= 400:
+                raise MediaFetchError(f"media metadata: {meta_response.status_code} {meta_response.text[:200]}")
+            meta = meta_response.json() or {}
+            url = str(meta.get("url") or "")
+            if not url:
+                raise MediaFetchError("media metadata carried no download url")
             media = await client.get(url, headers={"Authorization": f"Bearer {self.token}"})
-        return media.content, meta.get("mime_type", "application/octet-stream")
+            if media.status_code >= 400:
+                raise MediaFetchError(f"media download: {media.status_code} {media.text[:200]}")
+        return media.content, str(meta.get("mime_type") or "application/octet-stream")
 
 
 def _body_of(kind: str | None, payload: dict[str, Any]) -> str | None:
