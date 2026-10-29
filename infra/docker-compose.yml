@@ -1,0 +1,176 @@
+name: broker-hub
+
+# Everything the platform needs on a laptop: Postgres 16, Redis, MinIO, API, Celery worker + beat,
+# and the built SPA behind nginx. Values come from infra/.env (copy infra/.env.example).
+x-backend-env: &backend-env
+  DATABASE_URL: postgresql+asyncpg://broker:broker@postgres:5432/brokerhub
+  REDIS_URL: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis:6379/1
+  CELERY_RESULT_BACKEND: redis://redis:6379/2
+  # empty token + DEBUG=false ⇒ GET /metrics answers 403 (ADR-011); set it for a real scraper
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
+  # the local stack runs the simulator so the inbox can be demoed without vendor credentials
+  INTEGRATIONS_DRIVER: ${INTEGRATIONS_DRIVER:-sim}
+  # Object storage. The laptop stack stores attachments on the `objectsdata` volume, because the MinIO
+  # images this file used to pull were deleted from Docker Hub and Quay now refuses anonymous pulls
+  # (ADR-020). A deployment that runs its own S3/MinIO keeps the same contract: set
+  # `STORAGE_BACKEND=s3` plus the four S3_* values, and `S3Storage` creates the bucket on first use.
+  STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+  STORAGE_DIR: /srv/objects
+  S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://minio:9000}
+  S3_BUCKET: ${S3_BUCKET:-brokerhub}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-broker}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-broker-secret}
+  JWT_SECRET: ${JWT_SECRET:-change-me-in-any-shared-environment-0123456789}
+  DEBUG: ${DEBUG:-false}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+  # outbound mail lands in mailpit below — nothing leaves the laptop in local runs (spec §3)
+  SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
+  EMAIL_FROM: ${EMAIL_FROM:-no-reply@brokerhub.local}
+  # Secrets saved from the settings screen are encrypted with this. Empty in local runs is fine (it is then
+  # derived from JWT_SECRET); a production deploy must set it — the API refuses to boot without it (ADR-016).
+  SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}
+  SECRETS_ENCRYPTION_KEY_OLD: ${SECRETS_ENCRYPTION_KEY_OLD:-}
+  # Environment fallbacks only: the saved `integration_configs` row wins over every one of these.
+  WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+  WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+  WHATSAPP_BUSINESS_ACCOUNT_ID: ${WHATSAPP_BUSINESS_ACCOUNT_ID:-}
+  WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-dev-app-secret}
+  WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-dev-verify-token}
+  TELEPHONY_PROVIDER: ${TELEPHONY_PROVIDER:-twilio}
+  TELEPHONY_WEBHOOK_SECRET: ${TELEPHONY_WEBHOOK_SECRET:-dev-telephony-secret}
+  TELEPHONY_API_KEY: ${TELEPHONY_API_KEY:-}
+  # Where Meta / the PBX should call back to. The SPA and the API share 5173 through nginx, so the
+  # default works for `docker compose up` on a laptop; a real deploy sets its own origin here.
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:5173}
+
+services:
+  mailpit:
+    # Dev SMTP sink + web UI: notifications, SLA warnings and follow-up reminders are all readable at
+    # http://localhost:8025 without an SMTP provider. Never expose this outside a laptop.
+    image: axllent/mailpit:v1.20
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpitdata:/data
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: broker
+      POSTGRES_PASSWORD: broker
+      POSTGRES_DB: brokerhub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U broker -d brokerhub"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "${PG_PORT:-5432}:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: broker-hub-backend:local
+    command: ["alembic", "upgrade", "head"]
+    environment: *backend-env
+    volumes:
+      - objectsdata:/srv/objects
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: broker-hub-backend:local
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    environment: *backend-env
+    volumes:
+      - objectsdata:/srv/objects
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: broker-hub-backend:local
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "worker", "--loglevel", "INFO", "--concurrency", "4"]
+    environment: *backend-env
+    volumes:
+      - objectsdata:/srv/objects
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app:celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  beat:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: broker-hub-backend:local
+    # the SLA sweep is the heartbeat of the inbox: overdue flags and reminders come from here
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "beat", "--loglevel", "INFO"]
+    environment: *backend-env
+    volumes:
+      - objectsdata:/srv/objects
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: infra/frontend.Dockerfile
+    image: broker-hub-frontend:local
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  mailpitdata:
+  objectsdata:
+  pgdata:
+  redisdata:

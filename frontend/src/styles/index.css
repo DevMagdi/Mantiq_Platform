@@ -1,0 +1,102 @@
+@import "@fontsource/ibm-plex-sans-arabic/400.css";
+@import "@fontsource/ibm-plex-sans-arabic/500.css";
+@import "@fontsource/ibm-plex-sans-arabic/600.css";
+@import "@fontsource/ibm-plex-sans-arabic/700.css";
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-bg text-ink font-sans text-base antialiased;
+  }
+  /* Focus ring: 2px primary, per spec (never removed, only restyled). */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  * {
+    scrollbar-width: thin;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card bg-card shadow-card;
+    padding: 18px 20px;
+    border: 1px solid var(--line);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-btn px-[18px] py-[11px] text-sm font-semibold transition;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-hover;
+  }
+  .btn-secondary {
+    @apply btn bg-card text-ink;
+    border: 1px solid #c7d2fe;
+  }
+  .btn-ghost {
+    @apply btn text-muted hover:text-ink;
+  }
+  .field {
+    @apply w-full rounded-field border border-line-2 bg-card px-3 py-[10px] text-sm outline-none transition placeholder:text-muted;
+  }
+  .field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  .label {
+    @apply mb-1 block text-[13px] font-semibold text-ink;
+  }
+  .table-head {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  .row-line {
+    border-top: 1px solid var(--line);
+  }
+  .content-pad {
+    @apply px-[30px] py-[24px];
+  }
+  /* The shell's header is `sticky top-0 z-20` and 54px tall. Without a scroll margin, anything the
+     browser brings to the top edge — a focused control, a row scrolled into view, a tap target Playwright
+     is about to hit — ends up *under* it and cannot be used. Three e2e tests failed on exactly that. */
+  main :is(a, button, input, select, textarea, [data-request-row], [data-lead-card]) {
+    scroll-margin-top: 62px;
+  }
+  .stack-20 > * + * {
+    margin-block-start: 20px;
+  }
+  .hstack-16 {
+    @apply flex items-center gap-4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.skeleton {
+  @apply rounded-btn bg-[#EDEFF6];
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}

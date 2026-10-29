@@ -1,0 +1,32 @@
+:root {
+  /* Values are the design sheet's (spec §4). Written numbers win over any mockup pixel. */
+  --bg: #f3f4f9;
+  --card: #ffffff;
+  --ink: #101828;
+  --muted: #667085;
+  --line: #eef0f6;
+  --line-2: #e4e7ec;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --sidebar: #0e1424;
+  --sidebar-active: #1c2547;
+  --sidebar-text: #aeb7d0;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-soft: #eef0ff;
+  --primary-ink: #3730a3;
+  --teal: #2dd4bf;
+  --kanban-col: #e9ecf6;
+  --row-warn: #fffaeb;
+  --row-ok: #f4fbf7;
+  /* badges: ink/background pairs from the sheet */
+  --g-bg: #f0fdf4;
+  --g-ink: #05603a;
+  --a-bg: #fffaeb;
+  --a-ink: #92400e;
+  --r-bg: #fef3f2;
+  --r-ink: #b42318;
+  --b-bg: #eff6ff;
+  --b-ink: #175cd3;
+  --t-bg: #ecfdf5;
+  --t-ink: #0f766e;
+}
