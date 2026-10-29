@@ -655,6 +655,7 @@ export const ar = {
     field: {
       phone_number_id: "Phone Number ID",
       business_account_id: "Business Account ID",
+      app_id: "App ID (معرّف تطبيق ميتا)",
       receive_media: "استقبال الوسائط (رسائل صوتية ومرفقات)",
       provider: "نوع السائق",
       recording_retention_days: "مدة حفظ التسجيلات (بالأيام)",

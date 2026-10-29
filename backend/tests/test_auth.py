@@ -100,8 +100,7 @@ async def test_password_hashing_does_not_block_the_event_loop(client, monkeypatc
     try:
         # 4 concurrent failures stay under LOGIN_MAX_ATTEMPTS (5)
         logins = [
-            asyncio.create_task(client.post("/api/v1/auth/login", json={"email": "rep_a@mantiq.test", "password": "x"}))
-            for _ in range(4)
+            asyncio.create_task(client.post("/api/v1/auth/login", json={"email": "rep_a@mantiq.test", "password": "x"})) for _ in range(4)
         ]
         await asyncio.sleep(0.05)  # let them all reach the hasher
         started = time.perf_counter()

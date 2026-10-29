@@ -151,6 +151,7 @@ describe("drift gates against the backend", () => {
     const keys = [...new Set([...found].map((match) => match[1] as string))];
     // the list is short and closed on purpose: a field nobody reads is deleted, not labelled (ADR-016 §8)
     expect(keys.slice().sort()).toEqual([
+      "app_id",
       "business_account_id",
       "encryption",
       "from_email",

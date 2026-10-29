@@ -373,9 +373,7 @@ def main() -> int:
         else:
             failures.append(f"{path} should be flag-gated, got {gated.status_code}")
 
-    admin_token = client.post("/api/v1/auth/login", json={"email": "admin@mantiq.test", "password": "Mantiq!2026"}).json()[
-        "access_token"
-    ]
+    admin_token = client.post("/api/v1/auth/login", json={"email": "admin@mantiq.test", "password": "Mantiq!2026"}).json()["access_token"]
     admin = {"authorization": f"Bearer {admin_token}"}
     toggled = client.patch("/api/v1/feature-flags/phase2.enabled", json={"enabled": True}, headers=admin)
     if toggled.status_code == 200:
@@ -427,9 +425,9 @@ def main() -> int:
                 else:
                     failures.append(f"signed media fetch -> {media.status_code}")
                 # a rep without calls.listen must not be able to listen (spec §6.4)
-                rep_token = client.post(
-                    "/api/v1/auth/login", json={"email": "sara.elsayed@mantiq.test", "password": "Mantiq!2026"}
-                ).json()["access_token"]
+                rep_token = client.post("/api/v1/auth/login", json={"email": "sara.elsayed@mantiq.test", "password": "Mantiq!2026"}).json()[
+                    "access_token"
+                ]
                 denied = client.get(f"/api/v1/calls/{recording['id']}/recording-url", headers={"authorization": f"Bearer {rep_token}"})
                 if denied.status_code == 403:
                     print("ok   recording url without calls.listen -> 403")

@@ -22,7 +22,7 @@ from app.core.errors import ValidationFailed
 from app.integrations import mobile_calls as mobile_calls_mod
 from app.integrations import whatsapp as whatsapp_mod
 from app.integrations.mobile_calls import MobileCallsProvider, parse_event
-from app.integrations.whatsapp import WhatsAppMeta
+from app.integrations.whatsapp import WhatsAppMeta, graph_base
 from sqlalchemy import select
 
 from tests.helpers import login
@@ -77,7 +77,7 @@ def test_meta_driver_posts_to_the_cloud_api_with_the_token_and_normalized_number
     assert result["message_id"] == "wamid.HBreal123"
     assert len(seen) == 1
     request = seen[0]
-    assert str(request.url) == f"https://graph.facebook.com/v21.0/{PHONE_ID}/messages"
+    assert str(request.url) == f"{graph_base()}/{PHONE_ID}/messages"
     assert request.headers["authorization"] == f"Bearer {TOKEN}"
     payload = json.loads(request.content)
     assert payload["messaging_product"] == "whatsapp"
@@ -384,7 +384,7 @@ async def test_a_staff_reply_leaves_the_building_through_the_live_driver(client,
         whatsapp_mod.use_transport(None)
 
     assert len(calls) == 1, "exactly one outbound call — no duplicate send on the reply path"
-    assert calls[0]["url"].startswith("https://graph.facebook.com/v21.0/")
+    assert calls[0]["url"].startswith(f"{graph_base()}/")
     assert calls[0]["auth"] == f"Bearer {TOKEN}"
     assert calls[0]["body"]["to"] == "201055554444"
     assert calls[0]["body"]["text"]["body"] == "أهلاً بك، العرض وصلك على واتساب"
