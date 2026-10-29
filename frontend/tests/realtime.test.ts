@@ -129,6 +129,27 @@ describe("RealtimeClient", () => {
     await vi.waitFor(() => expect(client.currentStatus).toBe("offline"));
   });
 
+  it("gives up instead of hammering a server that keeps refusing the stream", async () => {
+    /*
+     * The 401 path renews and immediately reconnects with zero delay — correct once, fatal in a loop.
+     * A server that mints a token it then rejects would spin the tab at full speed forever, so the
+     * retry is capped: after two renewals the client stops and leaves the screen honest.
+     */
+    const refresh = vi.fn().mockResolvedValue(true);
+    const fetchImpl = vi.fn().mockResolvedValue(new Response("{}", { status: 401 }));
+    const client = new RealtimeClient({
+      fetchImpl,
+      refresh,
+      onEvent: vi.fn(),
+      onResync: vi.fn(),
+    });
+    client.start();
+    await vi.waitFor(() => expect(client.currentStatus).toBe("offline"), { timeout: 2_000 });
+    await vi.runOnlyPendingTimersAsync();
+    expect(refresh).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(3); // first attempt + two renewed retries, then stop
+  });
+
   it("falls back to polling and still reports the change", async () => {
     // 1 stream attempt fails, then the revision endpoint reports a newer `leads`
     const fetchImpl = vi
