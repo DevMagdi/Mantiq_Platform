@@ -6,6 +6,7 @@ ruff>=0.16
 mypy>=1.19
 pip-audit>=2.9
 types-PyYAML>=6.0.12
+PyYAML>=6.0  # infra/validate_prod_stack.py parses the production compose in CI
 
 # patched transitive (venv base ships 66.1.1)
 setuptools>=80.9.0

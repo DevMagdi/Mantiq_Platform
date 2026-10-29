@@ -1,4 +1,4 @@
-"""Mantiq API application factory (formerly shipped as «Broker Hub» — see ADR-034)."""
+"""Mantiq API application factory. Brand history: ADR-034."""
 
 from __future__ import annotations
 

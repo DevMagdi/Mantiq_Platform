@@ -1,0 +1,273 @@
+name: mantiq
+
+# Mantiq — production stack.
+#
+#   cp infra/.env.prod.example infra/.env.prod      # fill it in (every value is required)
+#   docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod up -d
+#
+# Differences from `docker-compose.yml` (the laptop stack), on purpose:
+#   * ENV=prod, so `app.core.config` validates the whole file at boot and refuses to start on a weak
+#     secret, DEBUG, a non-secure cookie, a localhost CORS origin, SQLite, a temp storage dir or eager
+#     Celery. A misconfigured deploy fails here, before it takes traffic.
+#   * No mailpit: outbound mail uses a real SMTP relay (`SMTP_URL` / `SMTP_HOST` + credentials).
+#   * Postgres and Redis publish no host ports — only the backend network can reach them.
+#   * TLS terminates in this nginx (443 + certs volume); :80 only redirects.
+#   * `restart: unless-stopped`, resource limits and log rotation on every service, because a container
+#     that fills the disk with logs is an outage that looks like a slow disk.
+#   * The demo seeder never runs here: `python -m app.seed` refuses under ENV=prod.
+#
+# This file is a complete, self-contained stack. If you deploy to Kubernetes instead, `infra/k8s/` has
+# the same shape (see the README there); the values to translate are the environment block below.
+
+x-backend-env: &backend-env
+  ENV: prod
+  DEBUG: "false"
+  # Validated at boot: these three cannot be relaxed by environment drift.
+  COOKIE_SECURE: "true"
+  COOKIE_SAMESITE: ${COOKIE_SAMESITE:-lax}
+  INTEGRATIONS_DRIVER: ${INTEGRATIONS_DRIVER:-live}
+  # --- required, no defaults on purpose: an unset secret must be a boot error, not an empty string ---
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in infra/.env.prod (openssl rand -hex 32)}
+  SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:?set SECRETS_ENCRYPTION_KEY (Fernet key or >=16 chars)}
+  SECRETS_ENCRYPTION_KEY_OLD: ${SECRETS_ENCRYPTION_KEY_OLD:-}
+  DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL (postgresql+asyncpg://...)}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/1}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+  CELERY_TASK_ALWAYS_EAGER: "false"
+  # Public origin of the SPA, also used to render webhook callback URLs for copy-paste.
+  CORS_ORIGINS: ${CORS_ORIGINS:?set CORS_ORIGINS to the https origin of the SPA}
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?set PUBLIC_BASE_URL to the public https origin}
+  # --- object storage ---
+  STORAGE_BACKEND: ${STORAGE_BACKEND:-s3}
+  STORAGE_DIR: /srv/objects
+  S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+  S3_BUCKET: ${S3_BUCKET:-}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+  S3_REGION: ${S3_REGION:-}
+  # --- mail ---
+  SMTP_URL: ${SMTP_URL:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-0}
+  SMTP_USERNAME: ${SMTP_USERNAME:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-starttls}
+  SMTP_FROM_NAME: ${SMTP_FROM_NAME:-Mantiq}
+  EMAIL_FROM: ${EMAIL_FROM:?set EMAIL_FROM to the verified sender address}
+  SMTP_REPLY_TO: ${SMTP_REPLY_TO:-}
+  # --- live channels (the saved provider row on /settings wins over these) ---
+  WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+  WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+  WHATSAPP_BUSINESS_ACCOUNT_ID: ${WHATSAPP_BUSINESS_ACCOUNT_ID:-}
+  WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+  WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+  TELEPHONY_PROVIDER: ${TELEPHONY_PROVIDER:-twilio}
+  TELEPHONY_WEBHOOK_SECRET: ${TELEPHONY_WEBHOOK_SECRET:-}
+  TELEPHONY_API_KEY: ${TELEPHONY_API_KEY:-}
+  TELEPHONY_WEBHOOK_URL: ${TELEPHONY_WEBHOOK_URL:-}
+  # /metrics needs this bearer token in production (empty ⇒ 403 for everyone, which is fail-closed)
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
+  # one proxy hop (this nginx) in front of the API
+  TRUST_HOPS: ${TRUST_HOPS:-1}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-mantiq}
+      # checksums catch silent corruption; the default is off in postgres 16
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    # no `ports:` — the database is reachable only from this network
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2g }
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-512mb}
+      - --maxmemory-policy
+      - noeviction   # a queue must not silently drop jobs under memory pressure
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 768m }
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: mantiq-backend:prod
+    command: ["alembic", "upgrade", "head"]
+    environment: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+  backend:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: mantiq-backend:prod
+    restart: unless-stopped
+    command:
+      - uvicorn
+      - app.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - "*"
+      - --workers
+      - ${API_WORKERS:-2}
+    environment: *backend-env
+    volumes:
+      - objectsdata:/srv/objects
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # readiness, not liveness: it proves the database answers and migrations are at head
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/readyz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2g }
+    # no host port: only nginx reaches the API
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: mantiq-backend:prod
+    restart: unless-stopped
+    command:
+      - celery
+      - -A
+      - app.workers.celery_app:celery_app
+      - worker
+      - --loglevel
+      - INFO
+      - --concurrency
+      - ${WORKER_CONCURRENCY:-4}
+      - --max-tasks-per-child
+      - "200"
+    environment: *backend-env
+    volumes:
+      - objectsdata:/srv/objects
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app:celery_app inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 2g }
+
+  beat:
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+    image: mantiq-backend:prod
+    restart: unless-stopped
+    # exactly one scheduler: two beat processes would double every SLA sweep
+    command: ["celery", "-A", "app.workers.celery_app:celery_app", "beat", "--loglevel", "INFO"]
+    environment: *backend-env
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # beat has no RPC of its own: prove the scheduler process is alive, which is what actually breaks
+      # (a crashed beat means no SLA sweep and overdue flags silently stop appearing)
+      test: ["CMD-SHELL", "pgrep -f 'celery.*beat' > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 512m }
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/frontend.prod.Dockerfile
+    image: mantiq-frontend:prod
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+      - "${WEB_TLS_PORT:-443}:443"
+    volumes:
+      # mount the certificate directory, not the files: renewals replace symlinks (Let's Encrypt)
+      - ${TLS_CERT_DIR:-./certs}:/etc/nginx/certs:ro
+    environment:
+      # docker's embedded DNS answers `backend` on this network; nginx resolves it once at start
+      NGINX_ENTRYPOINT_QUIET_LOGS: "1"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      # :80 redirects to https, so a 301 is the healthy answer there
+      test: ["CMD-SHELL", "wget -q -O /dev/null -S http://127.0.0.1/ 2>&1 | grep -qE '301|302|200' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *logging
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512m }
+
+volumes:
+  pgdata:
+  redisdata:
+  objectsdata:

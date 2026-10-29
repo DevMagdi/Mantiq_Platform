@@ -1,3 +1,19 @@
+# --- Secrets ------------------------------------------------------------------
+# Only the `.env.example` files are tracked. A real `.env` holds machine-specific values
+# (passwords, JWT secret, SMTP credentials) and must never enter the repository — see
+# docs/PRODUCTION_READINESS.md for the history purge if one ever did.
+.env
+.env.*
+# …except the templates, including `infra/.env.prod.example` (a `.env.*` name that is documentation,
+# not a secret). Without the third line that file is silently never committed.
+!.env.example
+!*.env.example
+!*.env.*.example
+*.pem
+*.key
+!frontend/src/**/*.key
+secrets/
+
 # --- Python -------------------------------------------------------------------
 __pycache__/
 *.py[cod]

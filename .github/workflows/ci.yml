@@ -66,6 +66,11 @@ jobs:
           ruff format --check .
       - name: mypy (strict)
         run: mypy app
+      - name: Production stack is coherent
+        # anchors resolve, every ${VAR} is documented in .env.prod.example, every service has a restart
+        # policy, log caps and a healthcheck, and no private service publishes a host port
+        working-directory: .
+        run: python infra/validate_prod_stack.py
       - name: Test database
         run: psql "postgresql://broker:broker@localhost:5432/postgres" -c "CREATE DATABASE brokerhub_test;" || true
       - name: pytest + coverage

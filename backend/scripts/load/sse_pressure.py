@@ -25,17 +25,22 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import time
 from pathlib import Path
 from typing import Any
 
 import httpx
 
-BASE = "http://127.0.0.1:8020"
+BASE = os.environ.get("LOAD_BASE", "http://127.0.0.1:8020")
 PASSWORD = "Mantiq!2026"
 MANAGER = "manager@mantiq.test"
 CS = "cs@mantiq.test"
-PG_SOCKET = "/tmp/r8pg"
+PG_SOCKET = os.environ.get("LOAD_PG_SOCKET", "/tmp/r8pg")
+PG_DB = os.environ.get("LOAD_PG_DB", "brokerhub_load")
+#: The `psql` that ships with `pgserver`. The R8 copy of this file hardcoded `.venv/lib/...`, which only
+#: exists if the venv is named `.venv` in the current directory — override it, or put `psql` on PATH.
+PG_PSQL = os.environ.get("LOAD_PSQL", ".venv/lib/python3.11/site-packages/pgserver/pginstall/bin/psql")
 
 
 async def login(client: httpx.AsyncClient, email: str) -> tuple[str, float]:
@@ -49,17 +54,17 @@ async def login(client: httpx.AsyncClient, email: str) -> tuple[str, float]:
 async def pg_connections() -> int:
     """Active+idle connections PostgreSQL itself reports — the pool the client sees, from the server's side."""
     proc = await asyncio.create_subprocess_exec(
-        ".venv/lib/python3.11/site-packages/pgserver/pginstall/bin/psql",
+        PG_PSQL,
         "-h",
         PG_SOCKET,
         "-U",
         "postgres",
         "-d",
-        "brokerhub_load",
+        PG_DB,
         "-t",
         "-A",
         "-c",
-        "select count(*) from pg_stat_activity where datname='brokerhub_load'",
+        f"select count(*) from pg_stat_activity where datname='{PG_DB}'",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.DEVNULL,
     )
