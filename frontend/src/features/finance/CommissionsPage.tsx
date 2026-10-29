@@ -34,8 +34,12 @@ export default function CommissionsPage() {
   });
 
   const act = useMutation({
+    // The action is spelled out per branch instead of interpolated into the URL: a template that builds a
+    // route segment at runtime cannot be checked against the API, and `tests/apiPaths.test.ts` now does.
     mutationFn: (payload: { id: string; action: "approve" | "pay" }) =>
-      api.post<Settlement>(`/finance/commissions/${payload.id}/${payload.action}`, payload.action === "pay" ? { method: "bank" } : {}),
+      payload.action === "pay"
+        ? api.post<Settlement>(`/finance/commissions/${payload.id}/pay`, { method: "bank" })
+        : api.post<Settlement>(`/finance/commissions/${payload.id}/approve`, {}),
     onMutate: (payload) => setBusyId(payload.id),
     onSuccess: async (row, payload) => {
       await queryClient.invalidateQueries({ queryKey: ["finance"] });

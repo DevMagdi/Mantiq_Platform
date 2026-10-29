@@ -36,7 +36,29 @@ export default tseslint.config(
       "no-console": ["error", { allow: ["warn", "error"] }],
       eqeqeq: ["error", "always", { null: "ignore" }],
       "prefer-const": "error",
+      /*
+       * `Cannot read properties of undefined (reading 'toLowerCase')` is the most common crash on a screen
+       * that renders server data: one field the API did not send, and the tab is blank. `src/lib/text.ts`
+       * already solves it (`lower`/`upper`/`asText` are null-safe by construction) — this rule is what keeps
+       * the next component from calling the raw method again. Allow-listed below for the helper itself.
+       */
+      "no-restricted-properties": [
+        "error",
+        {
+          property: "toLowerCase",
+          message: "Use lower(value) from @/lib/text — it survives null/undefined and numbers.",
+        },
+        {
+          property: "toUpperCase",
+          message: "Use upper(value) from @/lib/text — it survives null/undefined and numbers.",
+        },
+      ],
     },
+  },
+  {
+    // the null-safe helpers are the one place that is allowed to call the raw methods
+    files: ["src/lib/text.ts"],
+    rules: { "no-restricted-properties": "off" },
   },
   {
     // Providers, hooks and shared constants are intentionally co-located with components here.
@@ -48,6 +70,8 @@ export default tseslint.config(
     rules: {
       "no-console": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      // tests read computed styles and fixtures that are always defined; nothing here is shipped
+      "no-restricted-properties": "off",
     },
   },
   {

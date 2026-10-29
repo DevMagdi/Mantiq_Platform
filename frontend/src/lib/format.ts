@@ -1,4 +1,5 @@
 /** Egyptian-locale formatting (spec §11) — one implementation, used by every screen. */
+import { upper } from "@/lib/text";
 
 const LOCALE = "ar-EG-u-nu-latn"; // Arabic UI with Western digits: what the mockups use
 
@@ -65,7 +66,7 @@ export function formatDuration(seconds: number | null | undefined): string {
 export function initials(name: string | null | undefined): string {
   if (!name) return "؟";
   const parts = name.trim().split(/\s+/).slice(0, 2);
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
+  return parts.map((part) => upper(part[0])).join("");
 }
 
 export function daysUntil(value: string | Date | null | undefined, now: Date = new Date()): number | null {

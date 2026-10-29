@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 
 import { api, onUnauthorized, setAccessToken } from "@/lib/api/client";
 import type { components } from "@/lib/api/schema";
+import { refreshAccessToken } from "@/lib/session";
 
 export type Me = components["schemas"]["MeOut"];
 export type LoginIn = components["schemas"]["LoginIn"];
@@ -62,18 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
       return;
     }
-    try {
-      const refreshed = await api.post<components["schemas"]["RefreshOut"]>("/auth/refresh");
-      setAccessToken(refreshed.access_token);
-      setHint(true);
-      const me = await api.get<Me>("/auth/me");
-      setUser(me);
-    } catch (error) {
+    const outcome = await refreshAccessToken();
+    if (!outcome.ok) {
       // a refused refresh means the cookie is gone; a network blip does not, and must not sign anyone out
-      const status = (error as { status?: number }).status;
-      if (status === 401 || status === 403) setHint(false);
+      if (outcome.refused) setHint(false);
       setUser(null);
       setAccessToken(null);
+      setReady(true);
+      return;
+    }
+    setHint(true);
+    try {
+      setUser(await api.get<Me>("/auth/me"));
+    } catch {
+      // the token is valid but the profile could not be read: keep the session, show the login screen
+      setUser(null);
     } finally {
       setReady(true);
     }
@@ -86,16 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(
     () =>
       onUnauthorized(() => {
-        // A dead access token is normal mid-session: refresh once, otherwise sign out.
-        void api
-          .post<{ access_token: string }>("/auth/refresh")
-          .then((refreshed) => setAccessToken(refreshed.access_token))
-          .catch(() => {
-            setHint(false);
-            setUser(null);
-            setAccessToken(null);
-            queryClient.clear();
-          });
+        // A dead access token is normal mid-session: renew once (shared with every other 401 in flight),
+        // and sign out only when the API *refuses* — an unreachable network is not a logout.
+        void refreshAccessToken().then((outcome) => {
+          if (outcome.ok || !outcome.refused) return;
+          setHint(false);
+          setUser(null);
+          setAccessToken(null);
+          queryClient.clear();
+        });
       }),
     [queryClient],
   );

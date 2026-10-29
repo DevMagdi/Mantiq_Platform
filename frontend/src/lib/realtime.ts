@@ -93,6 +93,7 @@ export class RealtimeClient {
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private stopped = true;
   private failures = 0;
+  private renewals = 0;
   private revision = 0;
   private topicRevisions: Record<string, number> = {};
   private polling = false;
@@ -152,15 +153,22 @@ export class RealtimeClient {
     if (response.status === 401) {
       // The access token expires every 15 minutes; a stream that dies on expiry and never comes back is a
       // screen that silently stops updating, which is the failure this whole feature exists to remove.
-      const renewed = (await this.options.refresh?.()) ?? false;
-      if (renewed) this.retrySoon(0);
-      else this.stop();
+      // It is capped at two attempts: a server that keeps rejecting a token it just agreed to mint would
+      // otherwise be met with an immediate, zero-delay reconnect — a hot loop that looks like a dead tab.
+      const renewed = this.renewals < 2 && ((await this.options.refresh?.()) ?? false);
+      if (renewed) {
+        this.renewals += 1;
+        this.retrySoon(0);
+      } else {
+        this.stop();
+      }
       return;
     }
     if (!response.ok || !response.body) {
       this.scheduleReconnect();
       return;
     }
+    this.renewals = 0;
 
     let reader: ReadableStreamDefaultReader<Uint8Array>;
     try {

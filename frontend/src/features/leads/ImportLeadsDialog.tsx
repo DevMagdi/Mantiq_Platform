@@ -32,7 +32,15 @@ export function ImportLeadsDialog({ onClose }: { onClose: () => void }) {
     onSuccess: (preview) => {
       setJob(preview);
     },
-    onError: (error: Error) => toast(error.message, "error"),
+    onError: (error: Error) => {
+      toast(error.message, "error");
+      /*
+       * A rejected file must stay re-selectable. `<input type=file>` fires `change` only when the value
+       * changes, so after a 422 ("this is not a workbook") picking the *same* file again did nothing at
+       * all — the dialog looked dead. Clearing the element (not the label) makes the next pick a change.
+       */
+      if (input.current) input.current.value = "";
+    },
   });
 
   const commit = useMutation({

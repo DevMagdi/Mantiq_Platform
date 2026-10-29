@@ -8,8 +8,9 @@
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { api, getAccessToken, setAccessToken } from "@/lib/api/client";
+import { getAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
+import { refreshAccessToken } from "@/lib/session";
 import { RealtimeClient, queryKeysFor, setTokenReader, type ChangeEvent, type RealtimeStatus } from "@/lib/realtime";
 
 interface RealtimeValue {
@@ -59,15 +60,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         void queryClient.invalidateQueries();
       },
       onStatus: setStatus,
-      refresh: async () => {
-        try {
-          const refreshed = await api.post<{ access_token: string }>("/auth/refresh");
-          setAccessToken(refreshed.access_token);
-          return true;
-        } catch {
-          return false;
-        }
-      },
+      // The same renewal the REST client uses: one call in flight, and its own 401 cannot re-enter it.
+      refresh: async () => (await refreshAccessToken()).ok,
     });
     client.start();
     // A tab that comes back from the background had its socket killed by the browser; reconnect at once and

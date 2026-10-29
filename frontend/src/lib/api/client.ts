@@ -35,6 +35,29 @@ export function onUnauthorized(listener: Listener): () => void {
   return () => unauthorizedListeners.delete(listener);
 }
 
+/**
+ * How many "renew the session" calls are in flight, i.e. requests whose own 401 must **not** start
+ * another renewal.
+ *
+ * Without this, a dead refresh cookie is an infinite loop: `POST /auth/refresh` answers 401, `request`
+ * notifies the listeners, the listener calls `/auth/refresh` again, which answers 401… Each turn is a
+ * microtask, so the tab stops responding and the console fills with identical errors (measured: one 401
+ * produced 6+ listener calls, and an unbounded run never returned). A single dead cookie in a restored
+ * tab was enough to reproduce it.
+ *
+ * `withoutUnauthorizedRetry` is the only sanctioned way to call the renewal endpoint.
+ */
+let renewalInFlight = 0;
+
+export async function withoutUnauthorizedRetry<T>(run: () => Promise<T>): Promise<T> {
+  renewalInFlight += 1;
+  try {
+    return await run();
+  } finally {
+    renewalInFlight -= 1;
+  }
+}
+
 let accessToken: string | null = null;
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -78,7 +101,9 @@ export async function request<T>(path: keyof paths | string, options: Options = 
   const text = await response.text();
   const payload: unknown = text ? safeParse(text) : null;
   if (!response.ok) {
-    if (response.status === 401) unauthorizedListeners.forEach((fn) => fn());
+    // A 401 from the renewal call itself must not ask the listeners to renew again — see
+    // `withoutUnauthorizedRetry` above.
+    if (response.status === 401 && renewalInFlight === 0) unauthorizedListeners.forEach((fn) => fn());
     throw new ApiError_(response.status, payload as Partial<ApiError> | null, `Request failed (${response.status})`);
   }
   return payload as T;

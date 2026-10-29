@@ -182,7 +182,9 @@ export function StaffShell({ children }: { children: ReactNode }) {
               onClick={async () => {
                 setSigningOut(true);
                 try {
-                  await api.post("/portal/sign-out").catch(() => undefined);
+                  // `logout()` rotates/removes the refresh cookie through `/auth/logout`. There is no
+                  // `/portal/sign-out` route: the old call 404'd on every staff sign-out (a portal-only
+                  // leftover), which is noise in the console and a wasted round trip.
                   await logout();
                   navigate("/login", { replace: true });
                 } finally {

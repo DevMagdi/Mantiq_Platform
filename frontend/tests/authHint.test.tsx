@@ -22,6 +22,8 @@ vi.mock("@/lib/api/client", () => ({
   setAccessToken: vi.fn(),
   getAccessToken: () => "token",
   onUnauthorized: () => () => undefined,
+  // the renewal path wraps its own call so a 401 from the refresh cannot re-enter the listeners
+  withoutUnauthorizedRetry: <T,>(run: () => Promise<T>) => run(),
 }));
 
 function Probe() {
