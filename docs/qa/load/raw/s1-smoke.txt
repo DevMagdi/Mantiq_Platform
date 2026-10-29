@@ -1,0 +1,63 @@
+[2026-10-28 10:01:32,367] e2b/INFO/locust.main: Starting Locust 2.47.0
+[2026-10-28 10:01:32,369] e2b/INFO/locust.main: Run time limit set to 120 seconds
+[2026-10-28 10:01:32,372] e2b/INFO/locust.runners: Ramping to 10 users at a rate of 10.00 per second
+[2026-10-28 10:01:32,393] e2b/INFO/locust.runners: All users spawned: {"CsFlow": 2, "ManagerFlow": 2, "PortalFlow": 1, "RepFlow": 4, "WriteFlow": 1} (10 total users)
+[2026-10-28 10:03:32,155] e2b/INFO/locust.main: --run-time limit reached, shutting down
+[2026-10-28 10:03:32,228] e2b/INFO/locust.main: Shutting down (exit code 0)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      GET /clients                                                                      26     0(0.00%) |     36      19     102     28 |    0.22        0.00
+GET      GET /clients/{id}/overview                                                        26     0(0.00%) |     32      16      70     29 |    0.22        0.00
+GET      GET /dashboard/channels                                                           45     0(0.00%) |     19       8      63     13 |    0.38        0.00
+GET      GET /dashboard/recent-requests                                                    45     0(0.00%) |     67      37     220     55 |    0.38        0.00
+GET      GET /dashboard/summary                                                            45     0(0.00%) |     26      14      85     19 |    0.38        0.00
+GET      GET /leads                                                                       303     0(0.00%) |     29      11     201     22 |    2.53        0.00
+GET      GET /leads/board                                                                 303     0(0.00%) |     39      17     262     29 |    2.53        0.00
+GET      GET /leads/board?assigned_to                                                      78     0(0.00%) |     32      16     230     26 |    0.65        0.00
+GET      GET /leads/stats                                                                 199     0(0.00%) |     28      11     214     19 |    1.66        0.00
+GET      GET /leads/{id}                                                                  152     0(0.00%) |     31      15     194     24 |    1.27        0.00
+GET      GET /leads/{id}/activities                                                       152     0(0.00%) |     34      15     257     25 |    1.27        0.00
+GET      GET /portal/overview                                                              72     0(0.00%) |     36      20     157     30 |    0.60        0.00
+GET      GET /portal/policies                                                              72     0(0.00%) |     34      17     242     25 |    0.60        0.00
+GET      GET /portal/requests                                                              51     0(0.00%) |     40      18     229     28 |    0.43        0.00
+GET      GET /requests/{id}                                                               152     0(0.00%) |     37      18     233     30 |    1.27        0.00
+GET      GET /requests/{id}/messages                                                      100     0(0.00%) |     33      16     196     25 |    0.84        0.00
+GET      GET /requests?only_open=true                                                     202     0(0.00%) |     49      24     289     39 |    1.69        0.00
+GET      GET /sales/team                                                                   32     0(0.00%) |     25      12     176     15 |    0.27        0.00
+POST     POST /auth/login                                                                  10     0(0.00%) |   1107     663    1568   1200 |    0.08        0.00
+POST     POST /leads                                                                       28     0(0.00%) |     23      12      68     15 |    0.23        0.00
+POST     POST /leads/{id}/assign                                                           11     0(0.00%) |     43      22      77     44 |    0.09        0.00
+POST     POST /requests/{id}/notes                                                         30     0(0.00%) |     48      20     191     31 |    0.25        0.00
+GET      setup (ids for the user's own screen)                                             40     0(0.00%) |    228      65     667    200 |    0.33        0.00
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                      2174     0(0.00%) |     44       8    1568     27 |   18.16        0.00
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      GET /clients                                                                           28     35     42     44     63     96    100    100    100    100    100     26
+GET      GET /clients/{id}/overview                                                             29     36     39     40     56     66     71     71     71     71     71     26
+GET      GET /dashboard/channels                                                                13     20     22     26     41     52     63     63     63     63     63     45
+GET      GET /dashboard/recent-requests                                                         55     66     73     84    120    140    220    220    220    220    220     45
+GET      GET /dashboard/summary                                                                 19     24     29     43     50     58     85     85     85     85     85     45
+GET      GET /leads                                                                             22     29     36     38     56     71     90     97    200    200    200    303
+GET      GET /leads/board                                                                       29     38     43     48     61     82    200    240    260    260    260    303
+GET      GET /leads/board?assigned_to                                                           26     32     36     42     57     67     85    230    230    230    230     78
+GET      GET /leads/stats                                                                       19     25     29     34     52     70    180    200    210    210    210    199
+GET      GET /leads/{id}                                                                        24     30     35     39     52     74     92    110    190    190    190    152
+GET      GET /leads/{id}/activities                                                             25     32     43     46     55     72     84    240    260    260    260    152
+GET      GET /portal/overview                                                                   30     37     42     42     52     70    100    160    160    160    160     72
+GET      GET /portal/policies                                                                   25     32     35     37     55     70    150    240    240    240    240     72
+GET      GET /portal/requests                                                                   28     37     48     48     68    100    100    230    230    230    230     51
+GET      GET /requests/{id}                                                                     30     37     41     44     57     73     99    160    230    230    230    152
+GET      GET /requests/{id}/messages                                                            25     32     38     43     53     73    190    200    200    200    200    100
+GET      GET /requests?only_open=true                                                           39     47     55     58     78     95    170    220    290    290    290    202
+GET      GET /sales/team                                                                        15     21     28     28     43     61    180    180    180    180    180     32
+POST     POST /auth/login                                                                     1200   1300   1300   1500   1600   1600   1600   1600   1600   1600   1600     10
+POST     POST /leads                                                                            15     20     38     40     52     59     68     68     68     68     68     28
+POST     POST /leads/{id}/assign                                                                44     46     56     56     59     78     78     78     78     78     78     11
+POST     POST /requests/{id}/notes                                                              31     35     60     76    100    160    190    190    190    190    190     30
+GET      setup (ids for the user's own screen)                                                 200    250    280    360    420    480    670    670    670    670    670     40
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                             27     36     43     47     67     96    210    270   1300   1600   1600   2174
+

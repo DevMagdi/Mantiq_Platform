@@ -1,0 +1,232 @@
+name: Load (R8)
+
+# R8 — the load/endurance run, on a machine that actually has PostgreSQL and a browser.
+#
+# Why a separate workflow and not a job in `ci.yml`: a load test is minutes long by definition (the browser
+# scenario alone runs 10 minutes, endurance 20), and hanging that onto every pull request would make the
+# normal gate unusable. It runs on demand (`workflow_dispatch`) and on the R8 pull request, and every number
+# it produces is uploaded as an artifact — the report quotes files, not memory.
+#
+# Environment recorded for the report (read it there, not from here):
+#   runner: ubuntu-latest (4 vCPU / 16 GB), postgres:16-alpine service, uvicorn single worker,
+#   API and browser sharing the runner — stated as a limitation in `docs/qa/load/r8-load-*.md`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "S3 browser window in minutes"
+        required: false
+        default: "10"
+      endurance_minutes:
+        description: "S6 endurance minutes"
+        required: false
+        default: "20"
+  pull_request:
+    paths:
+      - "backend/scripts/load/**"
+      - "frontend/load/**"
+      - "frontend/playwright.load.config.ts"
+      - ".github/workflows/load.yml"
+      - "docs/qa/load/**"
+
+concurrency:
+  group: load-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  api-load:
+    name: api · S1 smoke · S2 ramp · S5 writes · S4 realtime · S6 endurance
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: broker
+          POSTGRES_PASSWORD: broker
+          POSTGRES_DB: brokerhub_load
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U broker -d brokerhub_load"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://broker:broker@localhost:5432/brokerhub_load
+      INTEGRATIONS_DRIVER: sim
+      CELERY_TASK_ALWAYS_EAGER: "1"
+      PYTHONPATH: .
+      LOAD_PASSWORD: Br0kerHub!2026
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - name: Install
+        run: pip install -r requirements.txt -r requirements-dev.txt locust
+      - name: Migrate + seed the product's own data
+        run: |
+          python -m alembic -c alembic.ini upgrade head
+          python -m app.seed | tee /tmp/seed.log
+      - name: Volume seed (≥200 leads, ≥100 open requests, ≥50 clients — R8 §4)
+        run: python scripts/load/seed_volume.py --leads 240 --clients 52 --requests 120 | tee /tmp/seed-volume.log
+      - name: "Start the API (same command the compose file uses: one uvicorn worker)"
+        run: |
+          nohup python -m uvicorn app.main:app --host 127.0.0.1 --port 8020 --log-level warning \
+            > /tmp/api-server.log 2>&1 &
+          for _ in $(seq 1 60); do curl -fsS localhost:8020/healthz && break; sleep 1; done
+          curl -fsS -o /dev/null -w 'healthz %{http_code}\n' localhost:8020/healthz
+      - name: Record the environment (this is what the report's Environment section quotes)
+        run: |
+          mkdir -p ../docs/qa/load/raw
+          {
+            echo "commit: $(git rev-parse HEAD)"
+            echo "runner: $(uname -srm) · $(nproc) vCPU"
+            free -m | head -2
+            echo "uvicorn: single worker (no --workers flag), pool 10+20"
+            python -c "import sys;print('python', sys.version.split()[0])"
+            psql "postgresql://broker:broker@localhost:5432/brokerhub_load" -tAc "select version()" || true
+            locust --version || true
+          } | tee ../docs/qa/load/raw/environment-ci.txt
+      - name: S1 · smoke load (10 users · 2 min)
+        run: |
+          locust -f scripts/load/locustfile.py --headless -u 10 -r 10 -t 2m --host http://127.0.0.1:8020 \
+            --csv ../docs/qa/load/raw/ci-s1-smoke --html ../docs/qa/load/raw/ci-s1-smoke.html --only-summary \
+            | tee ../docs/qa/load/raw/ci-s1-smoke.txt
+      - name: S2 · ramp (10 → 25 → 50 → 75 → 100, 2 min each)
+        run: |
+          for U in 10 25 50 75 100; do
+            echo "=== S2 @${U} VUs"
+            LOAD_MODE=read locust -f scripts/load/locustfile.py --headless -u $U -r $U -t 2m --host http://127.0.0.1:8020 \
+              --csv ../docs/qa/load/raw/ci-s2-$U --html ../docs/qa/load/raw/ci-s2-$U.html --only-summary \
+              | tee ../docs/qa/load/raw/ci-s2-$U.txt
+          done
+      - name: S5 · write path under read load (25 users · 3 min)
+        run: |
+          LOAD_MODE=write locust -f scripts/load/locustfile.py --headless -u 25 -r 25 -t 3m --host http://127.0.0.1:8020 \
+            --csv ../docs/qa/load/raw/ci-s5-writes --html ../docs/qa/load/raw/ci-s5-writes.html --only-summary \
+            | tee ../docs/qa/load/raw/ci-s5-writes.txt
+      - name: S4 · realtime pressure (40 streams · 5 min, logins and reads meanwhile)
+        run: |
+          python scripts/load/sse_pressure.py --streams 40 --seconds 300 \
+            --out ../docs/qa/load/raw/ci-s4-realtime.json | tee ../docs/qa/load/raw/ci-s4-realtime.txt
+      - name: S6 · endurance (stable level · ${{ inputs.endurance_minutes || '20' }} min)
+        run: |
+          LOAD_MODE=read locust -f scripts/load/locustfile.py --headless -u 25 -r 5 -t "${{ inputs.endurance_minutes || '20' }}m" \
+            --host http://127.0.0.1:8020 --csv ../docs/qa/load/raw/ci-s6-endurance \
+            --html ../docs/qa/load/raw/ci-s6-endurance.html --only-summary \
+            | tee ../docs/qa/load/raw/ci-s6-endurance.txt
+      - name: 5xx / pool / timeout lines from the API log (must be empty)
+        if: always()
+        run: |
+          grep -cE '" 50[0-9] |QueuePool' /tmp/api-server.log > ../docs/qa/load/raw/ci-api-errors-count.txt || echo 0 > ../docs/qa/load/raw/ci-api-errors-count.txt
+          cat ../docs/qa/load/raw/ci-api-errors-count.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r8-api-load
+          path: |
+            docs/qa/load/raw/
+            /tmp/api-server.log
+          retention-days: 30
+
+  browser-load:
+    name: browser · S3 25 concurrent contexts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: broker
+          POSTGRES_PASSWORD: broker
+          POSTGRES_DB: brokerhub_load
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U broker -d brokerhub_load"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://broker:broker@localhost:5432/brokerhub_load
+      INTEGRATIONS_DRIVER: sim
+      CELERY_TASK_ALWAYS_EAGER: "1"
+      PYTHONPATH: .
+      LOAD_OUT: /tmp/r8-browser-load.json
+      LOAD_MINUTES: ${{ inputs.minutes || '10' }}
+      LOAD_PASSWORD: Br0kerHub!2026
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Backend deps (the load config boots migrations → seed → API → preview itself)
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Frontend deps + typed API client
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run codegen:api
+      - name: Chromium (the browser the scenario needs)
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: S3 · 25 concurrent browser users (${{ inputs.minutes || '10' }} min)
+        # the load config boots the stack itself (migrations → seed → volume seed → API → `vite preview`),
+        # the same command strings the e2e job uses. Nothing here starts a server by hand.
+        working-directory: frontend
+        run: |
+          set -o pipefail   # `| tee` alone hides a failing Playwright behind tee's own exit code
+          npx playwright --version
+          npx playwright test --config playwright.load.config.ts 2>&1 | tee /tmp/r8-browser-load.log
+      - name: Keep the numbers
+        if: always()
+        run: |
+          mkdir -p docs/qa/load/raw
+          cp /tmp/r8-browser-load.json docs/qa/load/raw/ci-s3-browser.json 2>/dev/null || true
+          cp /tmp/r8-browser-load.log docs/qa/load/raw/ci-s3-browser.log 2>/dev/null || true
+          cp /tmp/load-api.log docs/qa/load/raw/ci-s3-api.log 2>/dev/null || true
+          grep -cE '" 50[0-9] |QueuePool' /tmp/load-api.log > docs/qa/load/raw/ci-s3-api-errors-count.txt 2>/dev/null ||
+            echo 0 > docs/qa/load/raw/ci-s3-api-errors-count.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r8-browser-load
+          path: docs/qa/load/raw/
+          retention-days: 30
+      - name: Numbers on the PR
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### R8 · S3 — الأرقام المقيسة من المتصفح"
+            echo
+            echo '```json'
+            head -c 4000 /tmp/r8-browser-load.json 2>/dev/null || echo "browser report missing"
+            echo
+            echo '```'
+            echo
+            echo "<details><summary>سجل التشغيل (آخر 80 سطرًا)</summary>"
+            echo
+            echo '```'
+            tail -80 /tmp/r8-browser-load.log 2>/dev/null || echo "no log written"
+            echo '```'
+            echo
+            echo "</details>"
+          } > /tmp/r8-comment.md
+          gh pr comment "${{ github.event.number }}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/r8-comment.md

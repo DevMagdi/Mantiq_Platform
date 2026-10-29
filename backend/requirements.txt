@@ -1,0 +1,37 @@
+# Broker Hub backend — direct deps are ranged; transitive floors encode the security
+# fixes found by `pip-audit` (see docs/decisions/012-dependency-audit.md).
+# --- web / core ---
+fastapi>=0.130,<1.0
+uvicorn[standard]>=0.40,<1.0
+pydantic[email]>=2.12,<3
+pydantic-settings>=2.7,<3
+python-multipart>=0.0.32
+structlog>=25.1
+prometheus-client>=0.21   # /metrics exposition (spec §10 monitoring)
+# --- persistence ---
+SQLAlchemy[asyncio]>=2.0.45,<2.1
+alembic>=1.16,<2
+asyncpg>=0.31
+aiosqlite>=0.21
+greenlet>=3.2
+# --- security ---
+argon2-cffi>=25.1
+PyJWT>=2.12,<3
+# --- background / storage / integrations ---
+celery[redis]>=5.6,<6
+redis>=5.2
+boto3>=1.42
+httpx>=0.28,<1
+# --- files ---
+openpyxl>=3.1.5
+# issued-policy PDF (ADR-021): reportlab renders, arabic-reshaper shapes the Arabic, python-bidi applies
+# the Unicode bidi algorithm. The font itself is bundled in `app/assets/fonts` (see its README).
+reportlab>=4.2,<5
+arabic-reshaper>=3.0,<4
+python-bidi>=0.6,<1
+# --- transitive security floors ---
+starlette>=0.47           # GHSA-422c-pjqp-cp3p, GHSA-p94p-q73i-4w9w
+urllib3>=2.7.0            # CVE-2025-66471
+requests>=2.32.5          # CVE-2024-47081
+aiohttp>=3.12.14          # GHSA-mf9v-mfxr-j63j
+cryptography>=46.0.7         # Fernet + HKDF for integration secrets at rest (ADR-016)

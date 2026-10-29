@@ -1,0 +1,338 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # only used by the e2e job's failure digest, and only on `pull_request` events: the report has to land
+  # somewhere a reviewer can read it, and job logs cannot be fetched outside GitHub's own UI
+  pull-requests: write
+
+jobs:
+  backend:
+    name: backend · ruff · mypy · pytest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: broker
+          POSTGRES_PASSWORD: broker
+          POSTGRES_DB: brokerhub
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U broker -d brokerhub"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://broker:broker@localhost:5432/brokerhub
+      DATABASE_URL_TEST: postgresql+asyncpg://broker:broker@localhost:5432/brokerhub_test
+      REDIS_URL: redis://localhost:6379/0
+      INTEGRATIONS_DRIVER: sim
+      CELERY_TASK_ALWAYS_EAGER: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # scripts/check_migrations.py compares against origin/main, and the default shallow checkout
+          # does not carry that ref
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+      - name: Ruff (lint + format)
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: mypy (strict)
+        run: mypy app
+      - name: Test database
+        run: psql "postgresql://broker:broker@localhost:5432/postgres" -c "CREATE DATABASE brokerhub_test;" || true
+      - name: pytest + coverage
+        # The log is captured, not discarded: the raw job log is served from blob storage a reviewer's
+        # sandbox cannot read, so "backend is red" used to be the whole story (see the digest step below).
+        run: |
+          set +e
+          coverage run -m pytest -q --tb=short > /tmp/pytest.log 2>&1
+          code=$?
+          tail -40 /tmp/pytest.log
+          coverage xml -o coverage.xml || true
+          coverage report --skip-covered || true
+          exit $code
+      - name: Failing tests on the PR
+        # WHY: R5 lost a round to a red backend with no readable reason — 234 tests, and the only evidence
+        # available was "exit code 1". This posts the short summary and the first tracebacks as a comment.
+        if: failure() && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python scripts/ci-pytest-digest.py
+          gh pr comment "${{ github.event.number }}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/pytest-failures.md
+      - name: Core coverage gate (spec §10)
+        run: python scripts/check_core_coverage.py
+      - name: Smoke every documented endpoint (seeded, in-process ASGI)
+        run: python scripts/smoke_api.py
+      - name: Live QA matrix (every daily path per role, races, hostile input)
+        # 188 checks over §4.1–§4.12 of the Live-Ready plan: auth, dashboard, inbox, leads, team,
+        # redistribute, import, users, settings, simulators, portal, isolation — plus a crawl of every
+        # GET route that fails the build on any 5xx. It owns its throwaway database (`/tmp/qa_live.db`).
+        run: PYTHONPATH=. python scripts/live_matrix.py
+      - name: Dependency audit
+        run: pip-audit --strict -r requirements.txt
+      - name: OpenAPI export must be committed (compared as data, not text)
+        run: python scripts/check_openapi_fresh.py
+      - name: Merged migrations must not be edited (ADR-001, exceptions per ADR-014)
+        run: python scripts/check_migrations.py
+      - name: Migration chain on a fresh PostgreSQL database
+        # `tests/test_migrations.py::test_chain_runs_on_a_fresh_postgresql_database` does this too, inside
+        # the suite; the explicit step is here because `compose up` (the documented deployment path) runs the
+        # chain as its very first action, and a failure should read like that and not like a test failure.
+        run: |
+          psql "postgresql://broker:broker@localhost:5432/postgres" -c "DROP DATABASE IF EXISTS brokerhub_deploy;" -c "CREATE DATABASE brokerhub_deploy;"
+          DATABASE_URL="postgresql+asyncpg://broker:broker@localhost:5432/brokerhub_deploy" \
+            alembic -c alembic.ini upgrade head
+          DATABASE_URL="postgresql+asyncpg://broker:broker@localhost:5432/brokerhub_deploy" \
+            alembic -c alembic.ini current
+  frontend:
+    name: frontend · lint · typecheck · unit · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Types are generated, never handwritten
+        run: |
+          npm run codegen:api
+          git diff --exit-code src/lib/api/schema.d.ts || {
+            echo "::error::src/lib/api/schema.d.ts is stale — run: (cd frontend && npm run codegen:api)"; exit 1; }
+      - name: ESLint (warnings are errors)
+        run: npm run lint
+      - name: TypeScript (app + e2e)
+        run: npm run typecheck
+      - name: Vitest
+        run: npm test
+      - name: Build
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: frontend/dist
+          retention-days: 7
+
+  e2e:
+    name: e2e · playwright · screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [backend, frontend]
+    env:
+      INTEGRATIONS_DRIVER: sim
+      CELERY_TASK_ALWAYS_EAGER: "1"
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Backend (the e2e webServer boots the API + seed itself)
+        working-directory: backend
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: npm ci --no-audit --no-fund
+      - run: npm run codegen:api
+      - name: Playwright (1440×900 and 390×844)
+        # E2E_USE_PREVIEW=1: the webServer builds the bundle and serves it with `vite preview`, so the
+        # suite never waits on Vite's first-request transforms (that cold start failed the first 9
+        # desktop tests in an earlier run). The proxy for /api and /media is configured for preview too.
+        run: |
+          npx playwright install --with-deps chromium
+          E2E_USE_PREVIEW=1 npm run e2e
+      - name: Failure digest on the PR
+        # WHY: GitHub cuts check-run annotations at 50 and the raw job log is only served from blob storage,
+        # which a reviewer's sandbox cannot fetch. Without this, "25 failed" is the whole story and people
+        # fix specs by guessing at the DOM — that cost two extra rounds on `e2e/settings.spec.ts`.
+        if: failure() && github.event_name == 'pull_request'
+        continue-on-error: true # a digest must never become a second reason for a red run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/ci-e2e-digest.py
+          gh pr comment "${{ github.event.number }}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/e2e-failures.md
+      - name: Screenshots for design review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/screenshots
+          retention-days: 30
+      - name: Numbers on the PR, even when the suite is green
+        # `Failure digest` only fires on red, so a passing round used to leave no record of how many tests
+        # actually ran — "it is green now" is not a measurement. This posts the report's own counts (and the
+        # skip list with its reasons) on every pull_request run.
+        if: always() && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 scripts/ci-e2e-summary.py
+          gh pr comment "${{ github.event.number }}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/e2e-summary.md
+      - name: Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7
+
+  docker:
+    name: docker · compose config · image builds · full stack boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose -f infra/docker-compose.yml config --quiet
+      - name: Build backend image
+        # tagged as compose names it, so `up` below reuses these images instead of building them again
+        run: docker build -f infra/backend.Dockerfile -t broker-hub-backend:local .
+      - name: Build frontend image
+        run: docker build -f infra/frontend.Dockerfile -t broker-hub-frontend:local .
+      - name: Smoke the backend image
+        run: |
+          docker run --rm -e DATABASE_URL="sqlite+aiosqlite:////tmp/t.db" broker-hub-backend:local \
+            python -c "import app.main; print('import-ok', app.main.app.title)"
+      - name: Boot the stack the way the runbook says to
+        # G2 of the gap ledger was "compose has never been run". `config --quiet` only proves the YAML
+        # parses; this proves the documented commands actually come up: migrate, API health, worker,
+        # and the SPA served by nginx with /api proxied — all on one `up`.
+        run: |
+          # `--wait-timeout` is finite on purpose: without it a stuck stack burns the job's whole timeout
+          # and the log says nothing but "still waiting".
+          #
+          # `tee` + `pipefail`: compose's own stderr ("toomanyrequests", "no such image", a pull that timed
+          # out) is the only place the *reason* for a failed boot is written, and the job log is not readable
+          # from a reviewer's sandbox. The digest step below reposts this file to the PR, so the cause travels
+          # with the failure instead of being guessed at (two rounds were spent guessing before that).
+          set -o pipefail
+          docker compose -f infra/docker-compose.yml up -d --wait --wait-timeout 420 2>&1 | tee /tmp/compose-up.log
+          docker compose -f infra/docker-compose.yml ps | tee -a /tmp/compose-up.log
+      - name: The stack answers over HTTP
+        # Every check names what it measured before it fails: `curl -f` exits 22 for *any* 4xx/5xx, so the
+        # bare form this replaced told a reviewer nothing but "exit code 22" (which is exactly what the next
+        # round would have had to guess at). The OpenAPI document is served by the API at `/openapi.json`
+        # (root), not under the version prefix — asking for `/api/v1/openapi.json` was the 404.
+        run: |
+          set -euo pipefail
+          step() { printf '\n== %s\n' "$1"; }
+          step "API liveness (direct)"
+          curl -fsS -w '  /healthz → %{http_code}\n' -o /dev/null localhost:8000/healthz
+          step "SPA shell served by nginx"
+          curl -fsS localhost:5173/ | grep -q 'id="root"'
+          echo '  localhost:5173/ contains the #root mount'
+          step "OpenAPI document (direct)"
+          curl -fsS localhost:8000/openapi.json -o /tmp/spec.json
+          python3 -c "import json;d=json.load(open('/tmp/spec.json'));print('  paths:',len(d['paths']))"
+          step "the SPA's /api proxy reaches the API"
+          # an unknown credential must be answered by the API (401 unauthorized), never by nginx (404 page)
+          code=$(curl -s -o /tmp/login.json -w '%{http_code}' -X POST localhost:5173/api/v1/auth/login \
+            -H 'content-type: application/json' -d '{"email":"nobody@brokerhub.test","password":"wrong-password"}')
+          cat /tmp/login.json; echo
+          test "$code" = "401" || { echo "proxy answered $code, not the API's 401"; exit 1; }
+          echo '  the proxy answered with the API body (401)'
+      - name: Seed and log in through the stack
+        # `app/seed.py` is idempotent and demo-only; the password is overridden here so the CI run does not
+        # exercise the repo's fallback credential
+        env:
+          SEED_PASSWORD: Ci-Seed-Pass-2026
+        run: |
+          docker compose -f infra/docker-compose.yml exec -T -e SEED_PASSWORD="$SEED_PASSWORD" backend python -m app.seed \
+            || docker compose -f infra/docker-compose.yml logs --tail=80 backend
+          TOKEN=$(curl -fsS -X POST localhost:5173/api/v1/auth/login \
+            -H 'content-type: application/json' \
+            -d "{\"email\":\"admin@brokerhub.test\",\"password\":\"$SEED_PASSWORD\"}" \
+            | python3 -c "import json,sys;print(json.load(sys.stdin)['access_token'])")
+          # `page_size` (1..200) is the documented page control; `limit` is not a parameter of this route.
+          curl -fsS "localhost:5173/api/v1/clients?page_size=1" -H "authorization: Bearer $TOKEN" -o /tmp/clients.json
+          python3 -c "import json;d=json.load(open('/tmp/clients.json'));print('clients page total:',d.get('total'))"
+          test "$(python3 -c "import json;print(json.load(open('/tmp/clients.json')).get('total') or 0)")" -gt 0
+      - name: Compose logs on failure
+        if: failure()
+        continue-on-error: true
+        run: docker compose -f infra/docker-compose.yml logs --tail=120 || true
+      - name: Docker failure digest on the PR
+        # WHY: the job log is served from blob storage a reviewer's sandbox cannot fetch, so "docker failed
+        # at Boot the stack" was the whole story for three rounds and the cause had to be guessed. This puts
+        # `ps -a` and the containers' own logs where a human (or an agent) can read them.
+        if: failure() && github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### docker · compose boot failed"
+            echo
+            echo '**services**'
+            echo '```'
+            docker compose -f infra/docker-compose.yml ps -a || true
+            echo '```'
+            echo
+            echo
+            echo '**`docker compose up` output**'
+            echo '```'
+            cat /tmp/compose-up.log 2>/dev/null || echo '(the boot step wrote no log)'
+            echo '```'
+            echo
+            echo '**last 200 log lines**'
+            echo '```'
+            docker compose -f infra/docker-compose.yml logs --tail=200 --no-color 2>&1 || true
+            echo '```'
+            echo
+            echo '**needed images**'
+            echo '```'
+            for image in postgres:16-alpine redis:7-alpine axllent/mailpit:v1.20 broker-hub-backend:local broker-hub-frontend:local; do
+              docker image inspect "$image" --format '{{.RepoTags}} present' 2>/dev/null || echo "$image NOT PRESENT LOCALLY"
+            done
+            echo '```'
+          } > /tmp/docker-boot.md
+          gh pr comment "${{ github.event.number }}" --repo "$GITHUB_REPOSITORY" --body-file /tmp/docker-boot.md
+      - name: Tear down
+        if: always()
+        continue-on-error: true
+        run: docker compose -f infra/docker-compose.yml down -v || true

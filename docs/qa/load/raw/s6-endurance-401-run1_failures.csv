@@ -1,0 +1,19 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,GET /portal/requests,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",793,2026-10-28T10:41:41Z,2026-10-28T10:51:36Z
+GET,GET /leads/{id},"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",2235,2026-10-28T10:41:38Z,2026-10-28T10:51:36Z
+GET,GET /leads/{id}/activities,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",2235,2026-10-28T10:41:38Z,2026-10-28T10:51:36Z
+GET,GET /leads,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",4276,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /leads/stats,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",2617,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /sales/team,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",382,2026-10-28T10:41:40Z,2026-10-28T10:51:36Z
+GET,GET /dashboard/channels,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",756,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /clients,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",368,2026-10-28T10:41:39Z,2026-10-28T10:51:34Z
+GET,GET /dashboard/summary,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",756,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /dashboard/recent-requests,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",756,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /requests/{id}/messages,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",1492,2026-10-28T10:41:39Z,2026-10-28T10:51:36Z
+GET,GET /requests?only_open=true,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",3221,2026-10-28T10:41:38Z,2026-10-28T10:51:36Z
+GET,GET /leads/board?assigned_to,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",943,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /portal/policies,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",1189,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /portal/overview,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",1188,2026-10-28T10:41:37Z,2026-10-28T10:51:36Z
+GET,GET /requests/{id},"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",2287,2026-10-28T10:41:38Z,2026-10-28T10:51:36Z
+GET,GET /leads/board,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",4275,2026-10-28T10:41:39Z,2026-10-28T10:51:36Z
+GET,GET /clients/{id}/overview,"CatchResponseError('401: {""code"":""unauthorized"",""message"":""Session expired — please sign in again"",""details"":null}')",368,2026-10-28T10:41:39Z,2026-10-28T10:51:34Z

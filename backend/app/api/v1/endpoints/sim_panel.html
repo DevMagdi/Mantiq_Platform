@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>محاكي القنوات — Broker Hub</title>
+<style>
+ :root{--bg:#F3F4F9;--card:#fff;--ink:#111827;--muted:#6B7280;--line:#E4E7F0;--primary:#4F46E5;--soft:#EEF0FF;--ok:#05603A;--radius:18px}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 "IBM Plex Sans Arabic",system-ui,sans-serif;padding:24px}
+ h1{font-size:22px;margin:0 0 4px}
+ p.lead{color:var(--muted);margin:0 0 20px}
+ .grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));max-width:1100px}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:0 1px 2px rgba(16,24,40,.05)}
+ h2{font-size:15px;margin:0 0 12px}
+ label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+ input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff}
+ button{margin-top:14px;width:100%;padding:11px 18px;border:0;border-radius:12px;background:var(--primary);color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+ button.alt{background:var(--soft);color:var(--primary)}
+ pre{background:#0E1424;color:#E5E7EB;padding:12px;border-radius:12px;overflow:auto;font-size:12px;min-height:52px;white-space:pre-wrap}
+ .hint{font-size:12px;color:var(--muted);margin-top:8px}
+ .ok{color:var(--ok);font-weight:600}
+</style></head><body>
+<h1>محاكي القنوات الواردة</h1>
+<p class="lead">متاح فقط عندما يكون <code>INTEGRATIONS_DRIVER=sim</code> — يمر بنفس مسار الويب هوك: توقيع، idempotency، فتح/ربط الطلب، حساب SLA، إشعار.</p>
+<div class="grid">
+ <form class="card" id="wa">
+  <h2>رسالة واتساب واردة</h2>
+  <label>رقم الموظف/العميل</label><input name="mobile" value="01001234567" dir="ltr" required>
+  <label>اسم المرسل</label><input name="sender_name" value="منى فؤاد — قسم الموارد البشرية">
+  <label>نص الرسالة</label><textarea name="body" rows="3">مطلوب إضافة مولود جديد لوثيقة التأمين الطبي</textarea>
+  <label>نوع المرفق الصوتي</label><select name="media_kind"><option value="">بدون</option><option value="audio/ogg">رسالة صوتية</option></select>
+  <label>مدة الصوت (ثوانٍ)</label><input name="duration_s" value="12" dir="ltr">
+  <button type="submit">إرسال واتساب وارد</button>
+  <p class="hint">يبني نفس الـ payload الذي تبعه Meta ويُرسله إلى <code>/api/v1/webhooks/whatsapp</code>.</p>
+ </form>
+ <form class="card" id="call">
+  <h2>مكالمة واردة</h2>
+  <label>رقم المتصل</label><input name="from_number" value="01001234567" dir="ltr" required>
+  <label>اسم المتصل</label><input name="caller_name" value="أحمد من شركة منطق">
+  <label>مدة المكالمة (ثوانٍ)</label><input name="duration_s" value="95" dir="ltr">
+  <label>تسجيل المكالمة</label><select name="with_recording"><option value="true">نعم — مع recording تجريبي</option><option value="false">لا</option></select>
+  <button type="submit">مكالمة واردة مع recording تجريبي</button>
+  <p class="hint">يُنشئ طلبًا من قناة اتصال، ويخزّن التسجيل، ويصدر رابطًا موقّعًا قصير العمر للتشغيل.</p>
+ </form>
+ <div class="card">
+  <h2>نتيجة آخر استدعاء</h2><pre id="out">{}</pre>
+  <p class="hint" id="note"></p>
+  <button class="alt" type="button" id="open">فتح صندوق الطلبات</button>
+ </div>
+</div>
+<script>
+ const out = document.getElementById("out"), note = document.getElementById("note");
+ const val = (form, name) => (form.elements.namedItem(name)?.value ?? "").trim();
+ async function run(url, payload, label) {
+  out.textContent = "…";
+  try {
+   const res = await fetch(url, {method:"POST", headers:{"content-type":"application/json"}, body: JSON.stringify(payload)});
+   const body = await res.json();
+   out.textContent = JSON.stringify(body, null, 2);
+   const id = body.request_id || (body.results && body.results[0] && body.results[0].request_id);
+   if (id) { window.__requestId = id; note.innerHTML = '<span class="ok">' + label + ' ✓ — request ' + id + '</span>'; }
+   else { note.textContent = label; }
+  } catch (e) { out.textContent = String(e); note.textContent = "فشل الاتصال بالـ API"; }
+ }
+ document.getElementById("wa").addEventListener("submit", (e) => {
+  e.preventDefault(); const f = e.target;
+  const kind = val(f, "media_kind") || null;
+  run("/api/v1/dev/sim/whatsapp", {mobile: val(f,"mobile"), sender_name: val(f,"sender_name"), body: val(f,"body") || null,
+      media_kind: kind, media_id: kind ? "sim-media-" + Date.now() : null, duration_s: kind ? Number(val(f,"duration_s")) : null}, "واتساب وارد");
+ });
+ document.getElementById("call").addEventListener("submit", (e) => {
+  e.preventDefault(); const f = e.target;
+  run("/api/v1/dev/sim/call", {from_number: val(f,"from_number"), caller_name: val(f,"caller_name"),
+      duration_s: Number(val(f,"duration_s") || 45), with_recording: val(f,"with_recording") === "true"}, "مكالمة واردة");
+ });
+ document.getElementById("open").addEventListener("click", () => {
+  location.href = "/inbox" + (window.__requestId ? "/" + window.__requestId : "");
+ });
+</script></body></html>

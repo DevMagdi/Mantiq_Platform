@@ -1,0 +1,84 @@
+[project]
+name = "broker-hub-backend"
+version = "0.1.0"
+requires-python = ">=3.12"  # the CI and image interpreter (ADR-002); dev boxes on 3.11 are unsupported
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF", "ANN", "ASYNC", "N", "PT", "RET", "ARG002", "PIE", "T20"]
+ignore = [
+  "B008", "RUF012", "UP007", "SIM108",
+  "N818",   # error classes are named NotFound/Conflict/… to read like HTTP semantics
+  "N812",     # `from app.domain import permissions as P` is the documented alias
+  # The project is Arabic-first: XLSX headers, docstrings and comments legitimately contain characters
+  # ruff's Latin-confusable heuristics call "ambiguous" (ا next to a Latin letter, – in prose).
+  "RUF001", "RUF002", "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ANN", "SLF001", "ARG001", "T201", "PLR2004", "E501", "PT018", "PT011", "PT006"]
+"app/repositories/*" = ["ANN401"]
+"app/api/serializers.py" = ["ANN401"]
+"app/api/v1/endpoints/*" = ["ANN401"]
+"app/core/scope.py" = ["ANN401"]
+"app/services/*" = ["ANN401"]
+"app/core/*" = ["ANN401"]
+"app/models/*" = ["ANN401", "ARG002"]
+"app/integrations/*" = ["ANN401", "ARG002"]
+"app/main.py" = ["ANN401"]
+"app/schemas/*" = ["ANN401"]
+"app/workers/*" = ["ANN401"]
+"migrations/*" = ["ANN", "T201", "E501", "W291", "I001"]
+"app/seed.py" = ["T201", "E501", "SIM102", "ANN401"]
+"scripts/*" = ["T201", "ANN", "E501", "E402", "ANN401", "SIM102"]
+
+[tool.mypy]
+# no explicit python_version: mypy checks the interpreter it runs on, which is 3.12 in CI and the image
+strict = true
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+exclude = ["^backend/migrations/versions/", "^\\.venv/"]
+warn_unused_ignores = false
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = [
+    "celery.*",
+    "argon2.*",
+    "jwt.*",
+    "boto3.*",
+    "botocore.*",
+    "openpyxl.*",
+    "structlog.stdlib.*",
+    # document rendering (ADR-021): reportlab ships no stubs, and the two bidi helpers are 30-line
+    # packages without a `py.typed`. The types we need are the return of one function, asserted below.
+    "reportlab.*",
+    "arabic_reshaper.*",
+    "bidi.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+  "integration: needs a real database (DATABASE_URL_TEST)",
+  "postgres_only: relies on PostgreSQL features (RLS, partial indexes)",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["app"]
+# SQLAlchemy 2 async runs its I/O on greenlets. Without this, everything after the first
+# `await session.execute(...)` disappears from the report (leads.py measured 30% → 89%).
+concurrency = ["thread", "greenlet"]
+
+[tool.coverage.report]
+precision = 1
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError", "if __name__ == .__main__.\":"]

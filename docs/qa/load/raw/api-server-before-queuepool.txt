@@ -1,0 +1,102 @@
+2026-10-28T11:25:00.134553Z [info     ] http                           cid=- method=POST ms=19175.1 path=/api/v1/auth/login status=200
+2026-10-28T11:25:00.591023Z [info     ] http                           cid=- method=POST ms=19354.1 path=/api/v1/auth/login status=200
+2026-10-28T11:25:00.675168Z [info     ] http                           cid=- method=POST ms=19331.5 path=/api/v1/auth/login status=200
+2026-10-28T11:25:00.833997Z [info     ] http                           cid=- method=POST ms=19455.6 path=/api/v1/auth/login status=200
+2026-10-28T11:25:00.905293Z [info     ] http                           cid=- method=POST ms=5457.4 path=/api/v1/auth/login status=200
+2026-10-28T11:25:01.367801Z [info     ] http                           cid=- method=POST ms=19554.5 path=/api/v1/auth/login status=200
+2026-10-28T11:25:01.444938Z [info     ] http                           cid=- method=POST ms=26988.8 path=/api/v1/auth/login status=200
+2026-10-28T11:25:01.599866Z [info     ] http                           cid=- method=POST ms=19484.3 path=/api/v1/auth/login status=200
+202*-**-**T**:**:**.*****6Z [info     ] http                           cid=- method=POST ms=30429.7 path=/api/v1/auth/login status=200
+2026-10-28T11:25:02.035470Z [error    ] unhandled                      cid=- error=TimeoutError message='QueuePool limit of size 10 overflow 20 reached, connection timed out, timeout 30.00 (Background on this error at: https://sqlalche.me/e/20/3o7r)' path=/api/v1/auth/login
+ERROR:    Exception in ASGI application
+  + Exception Group Traceback (most recent call last):
+  |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/_utils.py", line 104, in create_collapsing_task_group
+  |     async with anyio.create_task_group() as tg:
+  |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/anyio/_backends/_asyncio.py", line 847, in __aexit__
+  |     raise BaseExceptionGroup(
+  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
+  +-+---------------- 1 ----------------
+    | Traceback (most recent call last):
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/uvicorn/protocols/http/httptools_impl.py", line 422, in run_asgi
+    |     result = await app(  # type: ignore[func-returns-value]
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 63, in __call__
+    |     return await self.app(scope, receive, send)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/fastapi/applications.py", line 1194, in __call__
+    |     await super().__call__(scope, receive, send)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/applications.py", line 96, in __call__
+    |     await self.middleware_stack(scope, receive, send)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    |     raise exc
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    |     await self.app(scope, receive, _send)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/fastapi/telemetry/_asgi.py", line 151, in __call__
+    |     await self.app(scope, receive, send)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 203, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/app/main.py", line 127, in _bind_ip
+    |     return await call_next(request)
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 179, in call_next
+    |     raise app_exc from app_exc.__cause__ or app_exc.__context__
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 149, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 203, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/app/main.py", line 114, in _metrics
+    |     response = await call_next(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 179, in call_next
+    |     raise app_exc from app_exc.__cause__ or app_exc.__context__
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 149, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 91, in __call__
+    |     await self.simple_response(scope, receive, send, request_headers=headers)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/cors.py", line 149, in simple_response
+    |     await self.app(scope, receive, send)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 203, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/app/core/middleware.py", line 38, in dispatch
+    |     response = await call_next(request)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 179, in call_next
+    |     raise app_exc from app_exc.__cause__ or app_exc.__context__
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 149, in coro
+    |     await self.app(scope, receive_or_disconnect, send_no_error)
+    |   File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/starlette/middleware/base.py", line 203, in __call__
+    |     response = await self.dispatch_func(request, call_next)
+  File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3326, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 1320, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "/home/user/Insurance-Platform_new/backend/.venv/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 167, in _do_get
+    raise exc.TimeoutError(
+sqlalchemy.exc.TimeoutError: QueuePool limit of size 10 overflow 20 reached, connection timed out, timeout 30.00 (Background on this error at: https://sqlalche.me/e/20/3o7r)
+2026-10-28T11:25:03.509022Z [info     ] http                           cid=- method=POST ms=19351.9 path=/api/v1/auth/login status=200
+2026-10-28T11:25:03.752293Z [info     ] http                           cid=- method=GET ms=14861.2 path=/api/v1/requests status=200
+2026-10-28T11:25:03.837202Z [info     ] http                           cid=- method=POST ms=34887.1 path=/api/v1/auth/login status=200
+2026-10-28T11:25:04.045194Z [info     ] http                           cid=- method=POST ms=19686.9 path=/api/v1/auth/login status=200
+2026-10-28T11:25:04.177265Z [info     ] http                           cid=- method=POST ms=32643.3 path=/api/v1/auth/login status=200
+2026-10-28T11:25:04.203074Z [info     ] http                           cid=- method=GET ms=14580.8 path=/api/v1/leads status=200
+2026-10-28T11:25:04.230847Z [info     ] http                           cid=- method=POST ms=19590.9 path=/api/v1/auth/login status=200
+2026-10-28T11:25:04.644320Z [info     ] http                           cid=- method=POST ms=19354.8 path=/api/v1/auth/login status=200
+2026-10-28T11:25:04.672071Z [info     ] http                           cid=- method=GET ms=14313.4 path=/api/v1/requests/c8f5d8fd-2f14-4dce-b7bd-ed028a41bdea status=200
+2026-10-28T11:25:04.824109Z [info     ] http                           cid=- method=POST ms=19419.2 path=/api/v1/auth/login status=200
+2026-10-28T11:25:04.928447Z [info     ] http                           cid=- method=POST ms=28725.1 path=/api/v1/auth/login status=200
+2026-10-28T11:25:05.065352Z [info     ] http                           cid=- method=POST ms=33165.2 path=/api/v1/auth/login status=200
+2026-10-28T11:25:05.464345Z [info     ] http                           cid=- method=POST ms=6034.7 path=/api/v1/auth/login status=200
+2026-10-28T11:25:05.464913Z [info     ] http                           cid=- method=GET ms=14794.7 path=/api/v1/dashboard/recent-requests status=200
+2026-10-28T11:25:05.651378Z [info     ] http                           cid=- method=POST ms=19581.0 path=/api/v1/auth/login status=200
+2026-10-28T11:25:05.652745Z [info     ] http                           cid=- method=POST ms=19381.1 path=/api/v1/auth/login status=200

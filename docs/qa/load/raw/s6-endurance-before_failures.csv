@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,POST /auth/refresh,"CatchResponseError('refresh 401: {""code"":""unauthorized"",""message"":""Refresh token was already used — please sign in again"",""details"":null}')",32,2026-10-28T11:08:04Z,2026-10-28T11:20:10Z

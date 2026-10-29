@@ -1,0 +1,63 @@
+{
+  "scenario": "S3 concurrent browser users",
+  "web_url": "http://127.0.0.1:5173",
+  "minutes": 10,
+  "users": 25,
+  "users_by_role": {
+    "manager": 5,
+    "rep": 10,
+    "cs": 5,
+    "portal": 5
+  },
+  "flows": 3859,
+  "flows_ok": 3671,
+  "flows_ok_pct": 95.1,
+  "steps": 8521,
+  "steps_failed": 305,
+  "steps_failed_pct": 3.6,
+  "step_p50_ms": 618,
+  "step_p95_ms": 3574,
+  "step_p99_ms": 4635,
+  "by_step": {
+    "dashboard": {
+      "n": 1949,
+      "p50": 362,
+      "p95": 1227,
+      "failed": 69
+    },
+    "kanban": {
+      "n": 2186,
+      "p50": 710,
+      "p95": 1318,
+      "failed": 24
+    },
+    "inbox": {
+      "n": 1949,
+      "p50": 394,
+      "p95": 1260,
+      "failed": 69
+    },
+    "sales-team": {
+      "n": 527,
+      "p50": 460,
+      "p95": 1974,
+      "failed": 24
+    },
+    "new-lead": {
+      "n": 1659,
+      "p50": 2907,
+      "p95": 4034,
+      "failed": 0
+    },
+    "portal": {
+      "n": 251,
+      "p50": 6298,
+      "p95": 20511,
+      "failed": 119
+    }
+  },
+  "pageerrors": [],
+  "pageerror_count": 0,
+  "server_5xx": [],
+  "server_5xx_count": 0
+}

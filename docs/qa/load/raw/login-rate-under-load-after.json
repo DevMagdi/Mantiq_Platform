@@ -1,0 +1,51 @@
+{
+  "base": "http://127.0.0.1:8020",
+  "email": "manager@brokerhub.test",
+  "rates": [
+    {
+      "rate_per_s": 2.0,
+      "seconds": 30.0,
+      "logins": 61,
+      "p50_ms": 567.2,
+      "p95_ms": 740.2,
+      "p99_ms": 773.6,
+      "max_ms": 810.4,
+      "mean_ms": 566.6,
+      "codes": {
+        "200": 61
+      },
+      "non_200": 0
+    },
+    {
+      "rate_per_s": 5.0,
+      "seconds": 30.0,
+      "logins": 151,
+      "p50_ms": 5571.6,
+      "p95_ms": 12475.0,
+      "p99_ms": 16516.6,
+      "max_ms": 19039.7,
+      "mean_ms": 6187.7,
+      "codes": {
+        "200": 151
+      },
+      "non_200": 0
+    },
+    {
+      "rate_per_s": 10.0,
+      "seconds": 30.0,
+      "logins": 301,
+      "p50_ms": 24204.7,
+      "p95_ms": 37219.6,
+      "p99_ms": 41128.3,
+      "max_ms": 45559.0,
+      "mean_ms": 23863.8,
+      "codes": {
+        "200": 301
+      },
+      "non_200": 0
+    }
+  ],
+  "p95_under_800_at_rates": [
+    2.0
+  ]
+}

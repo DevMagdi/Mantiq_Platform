@@ -1,0 +1,11 @@
+-r requirements.txt
+pytest>=8.4
+pytest-asyncio>=0.26
+coverage>=7.13
+ruff>=0.16
+mypy>=1.19
+pip-audit>=2.9
+types-PyYAML>=6.0.12
+
+# patched transitive (venv base ships 66.1.1)
+setuptools>=80.9.0

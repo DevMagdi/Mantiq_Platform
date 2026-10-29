@@ -1,0 +1,80 @@
+[2026-10-28 10:26:37,093] e2b/INFO/locust.main: Starting Locust 2.47.0
+[2026-10-28 10:26:37,093] e2b/INFO/locust.main: Run time limit set to 1500 seconds
+[2026-10-28 10:26:37,095] e2b/INFO/locust.runners: Ramping to 25 users at a rate of 5.00 per second
+[2026-10-28 10:26:41,100] e2b/INFO/locust.runners: All users spawned: {"CsFlow": 6, "ManagerFlow": 5, "PortalFlow": 3, "RepFlow": 11} (25 total users)
+[2026-10-28 10:51:36,911] e2b/INFO/locust.main: --run-time limit reached, shutting down
+[2026-10-28 10:51:36,990] e2b/INFO/locust.main: Shutting down (exit code 1)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      GET /clients                                                                     753  368(48.87%) |    122       2     939     25 |    0.50        0.25
+GET      GET /clients/{id}/overview                                                       753  368(48.87%) |    109       2    1186     21 |    0.50        0.25
+GET      GET /dashboard/channels                                                         1457  756(51.89%) |     63       2     791      7 |    0.97        0.50
+GET      GET /dashboard/recent-requests                                                  1457  756(51.89%) |    156       2    1570      7 |    0.97        0.50
+GET      GET /dashboard/summary                                                          1457  756(51.89%) |     99       2     983      8 |    0.97        0.50
+GET      GET /leads                                                                      8651 4276(49.43%) |    108       1    1397     18 |    5.77        2.85
+GET      GET /leads/board                                                                8651 4275(49.42%) |    121       2    1194     20 |    5.77        2.85
+GET      GET /leads/board?assigned_to                                                    1778  943(53.04%) |    114       2     973      6 |    1.19        0.63
+GET      GET /leads/stats                                                                5200 2617(50.33%) |    104       2    2026     12 |    3.47        1.74
+GET      GET /leads/{id}                                                                 4638 2235(48.19%) |    107       2    1098     20 |    3.09        1.49
+GET      GET /leads/{id}/activities                                                      4638 2235(48.19%) |    114       2    1148     23 |    3.09        1.49
+GET      GET /portal/overview                                                            2431 1188(48.87%) |    136       2    1748     28 |    1.62        0.79
+GET      GET /portal/policies                                                            2431 1189(48.91%) |    118       2    1371     25 |    1.62        0.79
+GET      GET /portal/requests                                                            1625  793(48.80%) |    124       2    1083     26 |    1.08        0.53
+GET      GET /requests/{id}                                                              4608 2287(49.63%) |    129       2    1451     24 |    3.07        1.52
+GET      GET /requests/{id}/messages                                                     3141 1492(47.50%) |    114       2    1166     25 |    2.09        0.99
+GET      GET /requests?only_open=true                                                    6543 3221(49.23%) |    160       2    2152     29 |    4.36        2.15
+GET      GET /sales/team                                                                  717  382(53.28%) |     82       2     898      7 |    0.48        0.25
+POST     POST /auth/login                                                                  25     0(0.00%) |   1624     812    2691   1500 |    0.02        0.00
+GET      setup (ids for the user's own screen)                                            100     0(0.00%) |    794      64    2660    610 |    0.07        0.00
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                     61054 30137(49.36%) |    121       1    2691     19 |   40.71       20.09
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      GET /clients                                                                           25    100    190    250    400    500    640    780    940    940    940    753
+GET      GET /clients/{id}/overview                                                             21     97    170    220    340    430    600    740   1200   1200   1200    753
+GET      GET /dashboard/channels                                                                 7     42     80    110    200    290    430    530    770    790    790   1457
+GET      GET /dashboard/recent-requests                                                          7    140    250    330    500    670    770    900   1300   1600   1600   1457
+GET      GET /dashboard/summary                                                                  8     72    150    190    320    440    610    710    970    980    980   1457
+GET      GET /leads                                                                             18     87    160    210    340    460    630    770   1100   1400   1400   8651
+GET      GET /leads/board                                                                       20    100    190    250    380    500    670    810   1100   1200   1200   8651
+GET      GET /leads/board?assigned_to                                                            6     99    180    230    360    500    660    770    920    970    970   1778
+GET      GET /leads/stats                                                                       12     85    160    200    340    440    580    720   1000   2000   2000   5200
+GET      GET /leads/{id}                                                                        20     93    170    210    340    440    590    710    930   1100   1100   4638
+GET      GET /leads/{id}/activities                                                             23     99    170    220    360    490    650    770   1100   1100   1100   4638
+GET      GET /portal/overview                                                                   28    120    220    280    440    560    730    860   1200   1700   1700   2431
+GET      GET /portal/policies                                                                   25    110    190    240    370    500    630    740    930   1400   1400   2431
+GET      GET /portal/requests                                                                   26    110    190    240    380    520    710    830   1100   1100   1100   1625
+GET      GET /requests/{id}                                                                     24    110    200    260    410    530    740    880   1200   1500   1500   4608
+GET      GET /requests/{id}/messages                                                            25    100    170    220    360    480    650    780    990   1200   1200   3141
+GET      GET /requests?only_open=true                                                           29    140    250    320    490    660    910   1100   1400   2200   2200   6543
+GET      GET /sales/team                                                                         7     48    100    140    290    380    520    690    900    900    900    717
+POST     POST /auth/login                                                                     1500   1900   2100   2100   2300   2500   2700   2700   2700   2700   2700     25
+GET      setup (ids for the user's own screen)                                                 610    820   1200   1300   1900   2300   2600   2700   2700   2700   2700    100
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                             19    100    180    240    380    510    700    840   1300   2300   2700  61054
+
+Error report
+# occurrences      Error                                                                                               
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+1189               GET GET /portal/policies: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+943                GET GET /leads/board?assigned_to: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+2617               GET GET /leads/stats: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+4276               GET GET /leads: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+756                GET GET /dashboard/summary: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+756                GET GET /dashboard/recent-requests: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+1188               GET GET /portal/overview: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+756                GET GET /dashboard/channels: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+3221               GET GET /requests?only_open=true: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+2235               GET GET /leads/{id}: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+2235               GET GET /leads/{id}/activities: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+2287               GET GET /requests/{id}: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+1492               GET GET /requests/{id}/messages: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+4275               GET GET /leads/board: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+368                GET GET /clients: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+368                GET GET /clients/{id}/overview: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+382                GET GET /sales/team: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+793                GET GET /portal/requests: 401: {"code":"unauthorized","message":"Session expired — please sign in again","details":null}
+------------------|---------------------------------------------------------------------------------------------------------------------------------------------
+

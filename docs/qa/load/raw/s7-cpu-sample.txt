@@ -1,0 +1,57 @@
+[2026-10-28 11:20:56,690] e2b/INFO/locust.main: Starting Locust 2.47.0
+[2026-10-28 11:20:56,692] e2b/INFO/locust.main: Run time limit set to 300 seconds
+[2026-10-28 11:20:56,692] e2b/INFO/locust.runners: Ramping to 25 users at a rate of 5.00 per second
+[2026-10-28 11:21:00,697] e2b/INFO/locust.runners: All users spawned: {"CsFlow": 6, "ManagerFlow": 5, "PortalFlow": 3, "RepFlow": 11} (25 total users)
+[2026-10-28 11:25:56,493] e2b/INFO/locust.main: --run-time limit reached, shutting down
+[2026-10-28 11:25:56,534] e2b/INFO/locust.main: Shutting down (exit code 0)
+Type     Name                                                                          # reqs      # fails |    Avg     Min     Max    Med |   req/s  failures/s
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+GET      GET /clients                                                                      85     0(0.00%) |    653      17   14066     78 |    0.28        0.00
+GET      GET /clients/{id}/overview                                                        85     0(0.00%) |    534      15   11215     67 |    0.28        0.00
+GET      GET /dashboard/channels                                                          188     0(0.00%) |    179       7   13999     34 |    0.63        0.00
+GET      GET /dashboard/recent-requests                                                   188     0(0.00%) |    386      35   14806    100 |    0.63        0.00
+GET      GET /dashboard/summary                                                           188     0(0.00%) |    327      11   14114     56 |    0.63        0.00
+GET      GET /leads                                                                      1180     0(0.00%) |    363       9   14632     67 |    3.94        0.00
+GET      GET /leads/board                                                                1181     0(0.00%) |    392      13   18292     77 |    3.94        0.00
+GET      GET /leads/board?assigned_to                                                     248     0(0.00%) |    312      14   13960     83 |    0.83        0.00
+GET      GET /leads/stats                                                                 740     0(0.00%) |    316      10   14144     66 |    2.47        0.00
+GET      GET /leads/{id}                                                                  642     0(0.00%) |    333      12   14358     57 |    2.14        0.00
+GET      GET /leads/{id}/activities                                                       642     0(0.00%) |    339      13   14795     64 |    2.14        0.00
+GET      GET /portal/overview                                                             345     0(0.00%) |    418      18   14235     92 |    1.15        0.00
+GET      GET /portal/policies                                                             345     0(0.00%) |    412      16   14335     80 |    1.15        0.00
+GET      GET /portal/requests                                                             229     0(0.00%) |    395      17   14922     70 |    0.76        0.00
+GET      GET /requests/{id}                                                               641     0(0.00%) |    380      16   14346     89 |    2.14        0.00
+GET      GET /requests/{id}/messages                                                      460     0(0.00%) |    413      14   27301     73 |    1.53        0.00
+GET      GET /requests?only_open=true                                                     859     0(0.00%) |    511      21   20009    110 |    2.86        0.00
+GET      GET /sales/team                                                                  108     0(0.00%) |    151      10    3139     62 |    0.36        0.00
+POST     POST /auth/login                                                                  25     0(0.00%) |   2486    1584    3634   2500 |    0.08        0.00
+GET      setup (ids for the user's own screen)                                            100     0(0.00%) |    943     131    4002    520 |    0.33        0.00
+--------|----------------------------------------------------------------------------|-------|-------------|-------|-------|-------|-------|--------|-----------
+         Aggregated                                                                      8479     0(0.00%) |    392       7   27301     76 |   28.28        0.00
+
+Response time percentiles (approximated)
+Type     Name                                                                                  50%    66%    75%    80%    90%    95%    98%    99%  99.9% 99.99%   100% # reqs
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+GET      GET /clients                                                                           78    140    190    230    430   3400  14000  14000  14000  14000  14000     85
+GET      GET /clients/{id}/overview                                                             67     98    140    180    510   3800   9900  11000  11000  11000  11000     85
+GET      GET /dashboard/channels                                                                34     51     77     99    180    310   2600   3000  14000  14000  14000    188
+GET      GET /dashboard/recent-requests                                                        100    170    230    270    460    610   6100   7400  15000  15000  15000    188
+GET      GET /dashboard/summary                                                                 56    100    170    220    310    410   4600  11000  14000  14000  14000    188
+GET      GET /leads                                                                             67    120    170    220    360    520   4100   8400  14000  15000  15000   1180
+GET      GET /leads/board                                                                       77    140    220    270    370   1300   4200   9300  16000  18000  18000   1181
+GET      GET /leads/board?assigned_to                                                           83    140    200    230    400    670   3600   4500  14000  14000  14000    248
+GET      GET /leads/stats                                                                       66    120    170    210    350   1200   3400   6200  14000  14000  14000    740
+GET      GET /leads/{id}                                                                        57    120    180    220    330    510   3400   7300  14000  14000  14000    642
+GET      GET /leads/{id}/activities                                                             64    120    170    210    340    510   3500  11000  15000  15000  15000    642
+GET      GET /portal/overview                                                                   92    170    230    260    400   1400   4500  11000  14000  14000  14000    345
+GET      GET /portal/policies                                                                   80    130    170    210    390    520   4200  13000  14000  14000  14000    345
+GET      GET /portal/requests                                                                   70    140    230    280    400   1800   3700   8400  15000  15000  15000    229
+GET      GET /requests/{id}                                                                     89    150    220    260    400    660   4400   9800  14000  14000  14000    641
+GET      GET /requests/{id}/messages                                                            73    120    160    200    340    580   4300  11000  27000  27000  27000    460
+GET      GET /requests?only_open=true                                                          110    200    260    320    470   1100   5700  14000  20000  20000  20000    859
+GET      GET /sales/team                                                                        62     84    120    160    260    360   1400   2700   3100   3100   3100    108
+POST     POST /auth/login                                                                     2500   2700   2900   3100   3200   3300   3600   3600   3600   3600   3600     25
+GET      setup (ids for the user's own screen)                                                 520    960   1500   1700   2400   3000   3900   4000   4000   4000   4000    100
+--------|--------------------------------------------------------------------------------|--------|------|------|------|------|------|------|------|------|------|------|------
+         Aggregated                                                                             76    140    200    250    390   1400   4200   9300  15000  27000  27000   8479
+

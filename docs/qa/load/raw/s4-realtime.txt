@@ -1,0 +1,36 @@
+{
+  "scenario": "S4 realtime pressure",
+  "streams_requested": 40,
+  "seconds": 300,
+  "streams_200": 40,
+  "streams_non200": [],
+  "stream_first_frame_ms": {
+    "p50": 343.6,
+    "p95": 373.8
+  },
+  "stream_frames": {
+    "min": 1,
+    "max": 1
+  },
+  "stream_held_s_p50": 300.7,
+  "stream_errors": [],
+  "read_requests": 2655,
+  "read_p50_ms": 27.9,
+  "read_p95_ms": 174.4,
+  "read_p99_ms": 267.9,
+  "read_by_path_p95_ms": {
+    "/api/v1/dashboard/summary": 56.2,
+    "/api/v1/leads?page_size=10": 54.1,
+    "/api/v1/requests?only_open=true": 261.4
+  },
+  "read_5xx": [],
+  "read_errors": [],
+  "logins_during_pressure": 241,
+  "login_p50_ms": 213.0,
+  "login_p95_ms": 351.4,
+  "login_non200": [],
+  "login_errors": [],
+  "pg_connections_before": 11,
+  "pg_connections_max_during": 11,
+  "pg_connections_after": 11
+}

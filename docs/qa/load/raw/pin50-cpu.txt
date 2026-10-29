@@ -1,0 +1,14 @@
+10:16:31 uvicorn=0 postgres=3.6 locust=0 load=1.18
+10:16:35 uvicorn=0 postgres=2.6 locust=20.5 load=1.09
+10:16:39 uvicorn=0 postgres=2.5 locust=7.7 load=1.56
+10:16:43 uvicorn=0 postgres=3 locust=4.9 load=2.08
+10:16:47 uvicorn=0 postgres=4.7 locust=4.8 load=1.99
+10:16:51 uvicorn=0 postgres=6.1 locust=5.5 load=1.99
+10:16:55 uvicorn=0 postgres=14.4 locust=5.8 load=2.15
+10:16:59 uvicorn=0 postgres=12.2 locust=6 load=2.06
+10:17:03 uvicorn=0 postgres=11.8 locust=6.2 load=2.14
+10:17:07 uvicorn=0 postgres=11.5 locust=6.2 load=2.04
+10:17:11 uvicorn=0 postgres=11.7 locust=6.3 load=2.04
+10:17:15 uvicorn=0 postgres=10.1 locust=6.3 load=1.96
+10:17:19 uvicorn=0 postgres=11.8 locust=6.4 load=2.12
+10:17:23 uvicorn=0 postgres=12.4 locust=0 load=2.03
