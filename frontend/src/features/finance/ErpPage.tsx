@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookOpen, Download, Gauge, HandCoins, Landmark, Lock, LockOpen, ReceiptText, Vault } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, BookOpen, Download, Gauge, HandCoins, Landmark, Lock, LockOpen, ReceiptText, Scale, Vault } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
@@ -98,8 +98,13 @@ export default function ErpPage() {
         <>
           <div className="grid gap-3 sm:grid-cols-3">
             <Kpi label={t("erp.totalIn")} value={formatMoney(spend.data.total_in)} tone="g" icon={<Landmark size={18} />} />
-            <Kpi label={t("erp.totalOut")} value={formatMoney(spend.data.total_out)} tone="a" />
-            <Kpi label={t("erp.net")} value={formatMoney(spend.data.net)} tone={spend.data.net >= 0 ? "g" : "r"} />
+            <Kpi label={t("erp.totalOut")} value={formatMoney(spend.data.total_out)} tone="a" icon={<ArrowUpRight size={18} />} />
+            <Kpi
+              label={t("erp.net")}
+              value={formatMoney(spend.data.net)}
+              tone={spend.data.net >= 0 ? "g" : "r"}
+              icon={spend.data.net >= 0 ? <ArrowDownRight size={18} /> : <Scale size={18} />}
+            />
           </div>
           <Card className="mt-4">
             <SectionTitle>{t("erp.breakdown")}</SectionTitle>
@@ -149,7 +154,7 @@ export default function ErpPage() {
         {MODULES.map((m) => (
           <Link key={m.to} to={m.to} className="block">
             <Card className="h-full transition hover:border-primary">
-              <div className="mb-2 text-primary">{m.icon}</div>
+              <div className="mb-2 text-accent-ink">{m.icon}</div>
               <div className="text-[15px] font-bold text-ink">{t(m.titleKey)}</div>
               <div className="mt-1 text-[13px] text-muted">{t(m.descKey)}</div>
             </Card>

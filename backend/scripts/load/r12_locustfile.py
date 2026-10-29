@@ -19,9 +19,9 @@ import time
 
 from locust import HttpUser, between, task
 
-PASSWORD = os.getenv("LOAD_PASSWORD", "Br0kerHub!2026")
-MANAGER = os.environ.get("LOAD_MANAGER", "manager@brokerhub.test")
-CS = os.environ.get("LOAD_CS", "cs@brokerhub.test")
+PASSWORD = os.getenv("LOAD_PASSWORD", "Mantiq!2026")
+MANAGER = os.environ.get("LOAD_MANAGER", "manager@mantiq.test")
+CS = os.environ.get("LOAD_CS", "cs@mantiq.test")
 INBOUND_SECRET = os.getenv("R12_INBOUND_SECRET", "load-inbound-secret")
 WA_SECRET = os.getenv("R12_WA_SECRET", "load-wa-secret")
 MODE = os.environ.get("LOAD_MODE", "mixed")
@@ -209,7 +209,7 @@ class IsolationProbe(Authed):
     """A rep asking for requests outside their book must get 403/404 — a 200 here is a leak, counted as failure."""
 
     weight = WEIGHTS.get(MODE, WEIGHTS["mixed"])["IsolationProbe"]
-    email = "load.rep00@brokerhub.test"
+    email = "load.rep00@mantiq.test"
 
     @task
     def probe(self) -> None:

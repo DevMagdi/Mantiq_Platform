@@ -1,4 +1,6 @@
-# ADR-001: Broker Hub Architecture (layers, isolation, providers, SLA)
+# ADR-001: Mantiq Architecture (layers, isolation, providers, SLA)
+
+> الاسم في هذا القرار كان «Broker Hub»؛ المنتج أُعيد تسميته إلى **منطق / Mantiq** في ADR-034. القرار نفسه ساري كما هو.
 
 - Status: Accepted
 - Date: 2026-10-26
@@ -7,7 +9,7 @@
 
 ## Context
 
-Broker Hub replaces a paper/Excel/WhatsApp driven insurance-brokerage workflow in Egypt. The system must serve
+Mantiq (then «Broker Hub») replaces a paper/Excel/WhatsApp driven insurance-brokerage workflow in Egypt. The system must serve
 three very different audiences with hard data-isolation requirements from one codebase:
 
 1. Internal staff (sales reps, sales manager, customer-service agents, account managers).

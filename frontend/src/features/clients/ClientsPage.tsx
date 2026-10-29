@@ -122,8 +122,8 @@ export default function ClientsPage() {
                 className="rounded-pill px-3.5 py-1.5 text-[12.5px] font-semibold transition duration-150"
                 style={
                   filter === option.value
-                    ? { background: "var(--primary)", color: "#fff" }
-                    : { background: "var(--kanban-col)", color: "var(--muted)" }
+                    ? { background: "var(--color-accent)", color: "var(--color-on-accent)" }
+                    : { background: "var(--color-track)", color: "var(--color-muted)" }
                 }
                 aria-pressed={filter === option.value}
               >

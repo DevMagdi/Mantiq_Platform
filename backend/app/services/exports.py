@@ -36,7 +36,10 @@ from app.services import reports
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 _OPEN = [RequestStatus.NEW, RequestStatus.IN_PROGRESS, RequestStatus.WAITING_INSURER]
 EXPORT_CAP = 5000
-_HEADER_FILL = PatternFill("solid", fgColor="EEF0FF")
+# Brand header band (ADR-034): soft gold fill + Deep Navy bold label. Customer-visible in the file.
+_HEADER_FILL = PatternFill("solid", fgColor="F1E9D9")
+_HEADER_FONT = Font(bold=True, color="0E1728")
+_PRINT_HEADER = "Mantiq · منطق — Mantiq Technologies"
 _DATE_FORMAT = "yyyy/mm/dd"
 _DATETIME_FORMAT = "yyyy/mm/dd hh:mm"
 
@@ -243,15 +246,29 @@ def _cell(value: Any) -> Any:
     return str(value)
 
 
+def _brand(workbook: Workbook, sheet: str) -> None:
+    """Put the product name where the reader of a file actually sees it (ADR-034 §6): the file's own
+    properties, and the print header/footer on every page. Cells are untouched, so the data row contract
+    (header in row 1, one row per record) holds for anything that parses the sheet."""
+    workbook.properties.creator = _PRINT_HEADER
+    workbook.properties.title = f"{_PRINT_HEADER} — {sheet}"
+    sheet_props = workbook.worksheets[0]
+    sheet_props.oddHeader.center.text = f"&\"IBM Plex Sans Arabic,Bold\"{_PRINT_HEADER}"
+    sheet_props.oddHeader.center.size = 9
+    sheet_props.oddFooter.right.text = f"{sheet} · &D"
+    sheet_props.oddFooter.right.size = 8
+
+
 def _workbook(sheet: str, columns: list[Column], rows: list[dict[str, Any]]) -> bytes:
     wb = Workbook()
     ws = wb.active
     ws.title = sheet
+    _brand(wb, sheet)
     ws.sheet_view.rightToLeft = True  # Arabic-first: the sheet opens the way the screen reads (spec §11)
     ws.freeze_panes = "A2"
     ws.append([column.header for column in columns])
     for index, cell in enumerate(ws[1], start=1):
-        cell.font = Font(bold=True)
+        cell.font = _HEADER_FONT
         cell.fill = _HEADER_FILL
         cell.alignment = Alignment(horizontal="right", vertical="center")
         ws.column_dimensions[get_column_letter(index)].width = columns[index - 1].width
@@ -273,8 +290,9 @@ def period_workbook(data: dict[str, Any]) -> bytes:
     wb = Workbook()
     ws = wb.active
     ws.title = "Period"
+    _brand(wb, "Period")
     ws.sheet_view.rightToLeft = True
-    ws.append(["ERP period report — ERP تشغيلي للمكتب (ليس دفاتر ضريبية رسمية)"])
+    ws.append(["Mantiq · منطق — ERP period report — ERP تشغيلي للمكتب (ليس دفاتر ضريبية رسمية)"])
     ws.append(["period", data.get("label"), str(data.get("start")), str(data.get("end"))])
     ws.append(["total_in", data.get("total_in")])
     ws.append(["total_out", data.get("total_out")])
@@ -284,7 +302,7 @@ def period_workbook(data: dict[str, Any]) -> bytes:
     for row in data.get("by_type", []):
         ws.append([row.get("entry_type"), row.get("in_total"), row.get("out_total"), row.get("net")])
     for cell in ws[7]:
-        cell.font = Font(bold=True)
+        cell.font = _HEADER_FONT
         cell.fill = _HEADER_FILL
     out = BytesIO()
     wb.save(out)

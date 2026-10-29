@@ -157,7 +157,7 @@ export default function InboxPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-[15px] font-bold text-ink">{t("inbox.title")}</h2>
             <span
-              className="rounded-pill bg-primary-soft px-2 py-[2px] text-[11px] font-bold text-primary-ink tabular-nums"
+              className="rounded-pill bg-accent-muted px-2 py-[2px] text-[11px] font-bold text-accent-ink tabular-nums"
               data-testid="queue-count"
               aria-label={t("inbox.countAria", { n: formatNumber(list.data?.total ?? 0) })}
             >
@@ -194,7 +194,7 @@ export default function InboxPage() {
               <StateBlock kind="loading" />
             </div>
           ) : list.isError ? (
-            <StateBlock kind="error" action={<button type="button" className="text-primary" onClick={() => void list.refetch()}>{t("common.retry")}</button>} />
+            <StateBlock kind="error" action={<button type="button" className="text-accent-ink" onClick={() => void list.refetch()}>{t("common.retry")}</button>} />
           ) : rows.length === 0 ? (
             <StateBlock
               kind="empty"
@@ -202,7 +202,7 @@ export default function InboxPage() {
               action={
                 filter === "overdue" ? (
                   // a dead end is not an empty state: the way out is one click, back to the whole queue
-                  <button type="button" className="text-[13px] font-semibold text-primary" onClick={() => setFilter("open")}>
+                  <button type="button" className="text-[13px] font-semibold text-accent-ink" onClick={() => setFilter("open")}>
                     {t("inbox.showAll")}
                   </button>
                 ) : undefined
@@ -217,11 +217,11 @@ export default function InboxPage() {
                   type="button"
                   data-request-row={row.id}
                   onClick={() => openRequest(row.id)}
-                  className={`w-full border-b border-line px-4 py-3 text-start transition ${active ? "bg-primary-soft/60" : "hover:bg-[#FAFBFF]"}`}
+                  className={`w-full border-b border-line px-4 py-3 text-start transition ${active ? "bg-accent-muted" : "hover:bg-surface"}`}
                   style={row.is_overdue && !active ? { background: "var(--row-warn)" } : undefined}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full text-[11px] font-bold text-sidebar" style={{ background: "#C7D2FE" }}>
+                    <span className="grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full text-[11px] font-bold text-sidebar" style={{ background: "var(--color-accent-muted)" }}>
                       {initials(row.employee_name)}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -230,7 +230,7 @@ export default function InboxPage() {
                         <span className="shrink-0 text-[11px] text-muted">{relativeTime(row.last_activity_at ?? row.created_at)}</span>
                       </div>
                       <div className="mt-[2px] flex items-center gap-1.5">
-                        <span className="text-[12px] font-semibold text-primary">#{row.number}</span>
+                        <span className="text-[12px] font-semibold text-accent-ink">#{row.number}</span>
                         <span className="truncate text-[12px] text-muted">{row.subject}</span>
                       </div>
                       <div className="mt-1.5 flex items-center gap-1.5">
@@ -268,7 +268,7 @@ export default function InboxPage() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="truncate text-[16px] font-bold text-ink">{detail.data.subject}</h3>
-                  <span className="text-[13px] font-semibold text-primary">#{detail.data.number}</span>
+                  <span className="text-[13px] font-semibold text-accent-ink">#{detail.data.number}</span>
                 </div>
                 <p className="mt-1 text-[12px] text-muted">
                   {detail.data.client_name} · {detail.data.employee_name}
@@ -292,12 +292,12 @@ export default function InboxPage() {
               </div>
             </header>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[#FAFAFE] px-5 py-[18px]">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-surface px-5 py-[18px]">
               {detail.data.description ? (
-                <p className="rounded-btn bg-[#F2F4FB] px-3 py-2 text-[13px] text-muted">{detail.data.description}</p>
+                <p className="rounded-btn bg-track px-3 py-2 text-[13px] text-muted">{detail.data.description}</p>
               ) : null}
               {(detail.data.attachments ?? []).length ? (
-                <div className="rounded-btn border border-line bg-white px-3 py-2">
+                <div className="rounded-btn border border-line bg-surface px-3 py-2">
                   <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-muted">{t("inbox.attachments")}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {(detail.data.attachments ?? []).map((file) =>
@@ -321,7 +321,7 @@ export default function InboxPage() {
                 <Bubble key={message.id} message={message} />
               ))}
               {(detail.data?.notes ?? []).map((note) => (
-                <div key={note.id} className="mx-auto max-w-[560px] rounded-btn border border-dashed border-[#E7C778] bg-[var(--a-bg)] px-3 py-2">
+                <div key={note.id} className="mx-auto max-w-[560px] rounded-btn border border-dashed border-[var(--color-warn-ink)] bg-[var(--a-bg)] px-3 py-2">
                   <div className="mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--a-ink)]">
                     <StickyNote size={13} strokeWidth={1.8} />
                     {t("inbox.internalNote")}
@@ -474,13 +474,13 @@ function Bubble({ message }: { message: MessageRow }) {
   const outbound = message.direction === "out";
   return (
     <div className={`flex items-end gap-2 ${outbound ? "flex-row-reverse" : ""}`}>
-      <Avatar name={outbound ? t("common.appName") : message.channel} size={26} color={outbound ? "var(--primary)" : "#C7D2FE"} />
+      <Avatar name={outbound ? t("common.appName") : message.channel} size={26} color={outbound ? "var(--color-accent)" : "var(--color-accent-muted)"} />
       <div
         className="max-w-[68%] rounded-[14px] px-3.5 py-2.5 text-[13.5px] leading-[21px]"
         style={{
-          background: outbound ? "var(--primary)" : "#fff",
-          color: outbound ? "#fff" : "var(--ink)",
-          border: outbound ? "none" : "1px solid var(--line-2)",
+          background: outbound ? "var(--color-accent)" : "var(--color-surface)",
+          color: outbound ? "var(--color-on-accent)" : "var(--color-ink)",
+          border: outbound ? "none" : "1px solid var(--color-border-strong)",
           borderBottomRightRadius: outbound ? 4 : 14,
           borderBottomLeftRadius: outbound ? 14 : 4,
         }}
@@ -507,7 +507,7 @@ function Bubble({ message }: { message: MessageRow }) {
                 key={file.id}
                 href={file.url}
                 download={file.filename}
-                className="mt-2 flex items-center gap-2 rounded-btn border border-line bg-white px-2.5 py-2 text-[12px] font-semibold text-ink"
+                className="mt-2 flex items-center gap-2 rounded-btn border border-line bg-surface px-2.5 py-2 text-[12px] font-semibold text-ink"
               >
                 <Paperclip size={14} strokeWidth={1.8} />
                 <span className="min-w-0 flex-1 truncate">{file.filename}</span>
@@ -515,7 +515,7 @@ function Bubble({ message }: { message: MessageRow }) {
               </a>
             ) : null,
           )}
-        <div className={`mt-1 flex items-center gap-1 text-[10.5px] ${outbound ? "text-white/70" : "text-muted"}`}>
+        <div className={`mt-1 flex items-center gap-1 text-[10.5px] ${outbound ? "text-[color:var(--color-on-accent)] opacity-70" : "text-muted"}`}>
           {relativeTime(message.created_at)}
           {outbound ? (message.delivery_status === "delivered" ? <Check size={12} strokeWidth={2.4} /> : <Clock3 size={11} strokeWidth={1.8} />) : null}
         </div>
@@ -591,7 +591,7 @@ function VoicePlayer({ seconds, waveform, src }: { seconds: number; waveform: nu
       <button
         type="button"
         className="grid h-7 w-7 shrink-0 place-items-center rounded-full"
-        style={{ background: playing ? "var(--primary)" : "var(--primary-soft)", color: playing ? "#fff" : "var(--primary-ink)" }}
+        style={{ background: playing ? "var(--color-accent)" : "var(--color-accent-muted)", color: playing ? "var(--color-on-accent)" : "var(--color-accent-ink)" }}
         onClick={() => void toggle()}
         aria-label={playing ? t("inbox.pause") : t("inbox.play")}
         title={src ? undefined : t("common.noMedia")}
@@ -605,12 +605,12 @@ function VoicePlayer({ seconds, waveform, src }: { seconds: number; waveform: nu
             className="w-[3px] rounded-full transition-all duration-150"
             style={{
               height,
-              background: (index / bars.length) * 100 <= progress ? "var(--primary)" : "color-mix(in srgb, var(--muted) 45%, transparent)",
+              background: (index / bars.length) * 100 <= progress ? "var(--color-accent)" : "color-mix(in srgb, var(--color-muted) 45%, transparent)",
             }}
           />
         ))}
       </span>
-      <span className="text-[11px] font-semibold tabular-nums" style={{ color: "var(--muted)" }}>
+      <span className="text-[11px] font-semibold tabular-nums" style={{ color: "var(--color-muted)" }}>
         {formatDuration(elapsed)} / {formatDuration(seconds)}
       </span>
       {src ? (

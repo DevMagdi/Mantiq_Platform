@@ -181,7 +181,7 @@ export default function KanbanPage() {
       {!isManager ? (
         <div
           className="mb-4 flex items-center gap-2 rounded-btn px-3.5 py-2.5 text-[12.5px] font-semibold"
-          style={{ background: "var(--primary-soft)", color: "var(--primary-ink)" }}
+          style={{ background: "var(--color-accent-muted)", color: "var(--color-accent-ink)" }}
         >
           <AlertCircle size={15} strokeWidth={1.8} />
           {t("leads.isolationBanner")}
@@ -342,13 +342,13 @@ function Column({
   return (
     <div
       ref={drop.setNodeRef}
-      className={`rounded-card p-2.5 transition-colors duration-150 ${drop.isOver ? "ring-2 ring-[var(--primary)]" : ""}`}
-      style={{ background: "var(--kanban-col)" }}
+      className={`rounded-card p-2.5 transition-colors duration-150 ${drop.isOver ? "ring-2 ring-[var(--color-accent)]" : ""}`}
+      style={{ background: "var(--color-track)" }}
       data-column={id}
     >
       <div className="mb-2 flex items-center justify-between px-1">
         <h3 className="text-[13px] font-bold text-ink">{t(title)}</h3>
-        <span className="rounded-pill bg-white px-2 py-0.5 text-[11.5px] font-bold tabular-nums text-muted">{count}</span>
+        <span className="rounded-pill bg-surface px-2 py-0.5 text-[11.5px] font-bold tabular-nums text-muted">{count}</span>
       </div>
       <ul className="space-y-2">
         {leads.length === 0 ? <li className="px-1 py-3 text-[12px] text-muted">{t("leads.empty")}</li> : null}
@@ -432,7 +432,7 @@ function LeadCard({
               <X size={13} strokeWidth={2} />
             </button>
           ) : null}
-          <button type="button" className="flex items-center gap-0.5 text-[12px] font-semibold text-primary" onClick={() => onOpen(lead)}>
+          <button type="button" className="flex items-center gap-0.5 text-[12px] font-semibold text-accent-ink" onClick={() => onOpen(lead)}>
             {t("common.open")}
             <ChevronLeft size={14} strokeWidth={2} />
           </button>

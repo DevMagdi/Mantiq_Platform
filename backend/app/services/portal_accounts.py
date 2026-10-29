@@ -120,7 +120,7 @@ async def create_account(
                 details=[{"field": "email", "message": "بريد إلكتروني أو اسم مستخدم مطلوب", "type": "missing"}],
             )
         # a username-only account still needs a unique key: the mailbox is a local, deliverable-less handle
-        email = f"{username}@portal.brokerhub.local"
+        email = f"{username}@portal.mantiq.local"
 
     if username and (await session.execute(select(User.id).where(func.lower(User.username) == username))).scalar_one_or_none():
         raise Conflict("This username is already taken", details={"username": username})

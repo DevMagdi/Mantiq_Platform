@@ -144,7 +144,7 @@ export default function ExecutiveDashboardPage() {
                 <span className="h-2.5 flex-1 overflow-hidden rounded-pill bg-kanban">
                   <span
                     className="block h-full rounded-pill"
-                    style={{ width: `${row.count === 0 ? 0 : Math.max(2, (row.count / channelTotal) * 100)}%`, background: "var(--primary)" }}
+                    style={{ width: `${row.count === 0 ? 0 : Math.max(2, (row.count / channelTotal) * 100)}%`, background: "var(--color-accent)" }}
                   />
                 </span>
                 <span className="w-[80px] shrink-0 text-end text-[12.5px] font-semibold tabular-nums text-ink">{formatNumber(row.count)}</span>

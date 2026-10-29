@@ -19,6 +19,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { navItemsFor, openBadge, type NavItemModel } from "@/app/navModel";
+import { MantiqLockup } from "@/components/BrandMark";
 import { Avatar, SearchInput } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
@@ -75,13 +76,9 @@ export function StaffShell({ children }: { children: ReactNode }) {
         * phone gets its own navigation (bottom bar, below) and the full width for content.
         */}
       <aside className="hidden h-screen w-[264px] shrink-0 sticky top-0 bg-sidebar px-[12px] py-[18px] lg:block">
-        <div className="mb-[20px] flex items-center gap-2.5 px-2">
-          <span className="grid h-[34px] w-[34px] place-items-center rounded-[10px] text-[15px] font-bold text-white" style={{ background: "var(--primary)" }}>
-            و
-          </span>
-          <div className="min-w-0">
-            <div className="truncate text-[15px] font-bold text-white">{t("common.appName")}</div>
-          </div>
+        {/* mark + wordmark from the token system — no letter tile, no old brand colour (ADR-034) */}
+        <div className="mb-[20px] px-2">
+          <MantiqLockup wordmark={t("common.appName")} legal={t("common.legalName")} size={34} tone="dark" />
         </div>
 
         <nav className="flex flex-col gap-1" aria-label={t("nav.ariaLabel")}>
@@ -92,24 +89,39 @@ export function StaffShell({ children }: { children: ReactNode }) {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-btn px-3 py-[11px] text-[14px] font-semibold transition ${
-                  isActive ? "bg-[var(--sidebar-active)] text-white" : "text-[var(--sidebar-text)] hover:bg-white/5 hover:text-white"
+                `relative flex items-center gap-3 rounded-btn px-3 py-[11px] text-[14px] font-semibold transition ${
+                  isActive
+                    ? "bg-sidebar-active-bg text-sidebar-active"
+                    : "text-sidebar-text hover:bg-sidebar-hover hover:text-sidebar-text"
                 }`
               }
             >
-              {item.icon}
-              <span className="flex-1 truncate">{t(item.labelKey)}</span>
-              {item.showOpenBadge && badge ? (
-                <span className="rounded-pill bg-primary px-2 py-[2px] text-[11px] font-bold text-white">{badge}</span>
-              ) : null}
+              {({ isActive }) => (
+                <>
+                  {/* active indicator: a 3px bar on the inline-start edge — right under dir=rtl, left under ltr */}
+                  {isActive ? (
+                    <span
+                      aria-hidden="true"
+                      data-nav-indicator="active"
+                      className="absolute top-1/2 h-[22px] w-[3px] -translate-y-1/2 bg-sidebar-active"
+                      style={{ insetInlineStart: 3 }}
+                    />
+                  ) : null}
+                  {item.icon}
+                  <span className="flex-1 truncate">{t(item.labelKey)}</span>
+                  {item.showOpenBadge && badge ? (
+                    <span className="rounded-pill bg-accent px-2 py-[2px] text-[11px] font-bold text-on-accent">{badge}</span>
+                  ) : null}
+                </>
+              )}
             </NavLink>
             );
           })}
         </nav>
 
-        <div className="mt-[18px] border-t border-white/10 px-2 pt-3">
-          <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-white/40">{t("users.scope")}</div>
-          <div className="text-[12px] text-[var(--sidebar-text)]">
+        <div className="mt-[18px] border-t px-2 pt-3" style={{ borderColor: "var(--color-sidebar-line)" }}>
+          <div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-sidebar-muted">{t("users.scope")}</div>
+          <div className="text-[12px] text-sidebar-text">
             {user?.scope_mode === "all" ? t("users.allClients") : t("users.scoped")}
           </div>
         </div>
@@ -133,7 +145,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
             </form>
             <button
               type="button"
-              className="rounded-btn px-2.5 py-1.5 text-[13px] font-semibold text-muted transition hover:bg-[#F1F2F8] hover:text-ink"
+              className="rounded-btn px-2.5 py-1.5 text-[13px] font-semibold text-muted transition hover:bg-accent-muted hover:text-ink"
               onClick={() => void changeLanguage(i18n.language === "ar" ? "en" : "ar")}
               aria-label="language"
             >
@@ -155,7 +167,7 @@ export function StaffShell({ children }: { children: ReactNode }) {
                   ? { background: "var(--g-bg)", color: "var(--g-ink)" }
                   : realtime.status === "polling"
                     ? { background: "var(--a-bg)", color: "var(--a-ink)" }
-                    : { background: "var(--kanban-col)", color: "var(--muted)" }
+                    : { background: "var(--color-track)", color: "var(--color-muted)" }
               }
             >
               <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: "currentColor" }} />
@@ -200,13 +212,24 @@ export function StaffShell({ children }: { children: ReactNode }) {
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-1 px-1 py-2.5 text-[10.5px] font-semibold transition ${
-                isActive ? "text-primary" : "text-muted"
+              `relative flex flex-col items-center gap-1 px-1 py-2.5 text-[10.5px] font-semibold transition ${
+                isActive ? "text-accent-ink" : "text-muted"
               }`
             }
           >
-            {item.icon}
-            <span className="max-w-full truncate">{t(item.labelKey)}</span>
+            {({ isActive }) => (
+              <>
+                {isActive ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-[22%] top-0 h-[2px] rounded-full bg-accent"
+                    data-nav-indicator="active"
+                  />
+                ) : null}
+                {item.icon}
+                <span className="max-w-full truncate">{t(item.labelKey)}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </nav>

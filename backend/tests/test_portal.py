@@ -6,8 +6,8 @@ from typing import Any
 
 from tests.helpers import login
 
-OWNER = "owner@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
+OWNER = "owner@mantiq.test"
+MANAGER = "manager@mantiq.test"
 FORBIDDEN_KEYS = {
     "assigned_to",
     "assignee_name",

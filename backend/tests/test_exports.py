@@ -13,9 +13,9 @@ from openpyxl import load_workbook
 
 from tests.helpers import login
 
-ADMIN = "admin@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
 
 XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 

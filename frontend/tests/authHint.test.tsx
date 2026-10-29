@@ -58,9 +58,9 @@ describe("the session hint", () => {
   it("restores the session the hint promises, and keeps the hint", async () => {
     window.localStorage.setItem("bh.session", "1");
     post.mockResolvedValue({ access_token: "fresh" });
-    get.mockResolvedValue({ email: "manager@brokerhub.test", permissions: [] });
+    get.mockResolvedValue({ email: "manager@mantiq.test", permissions: [] });
     mount();
-    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("ready:manager@brokerhub.test"));
+    await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent("ready:manager@mantiq.test"));
     expect(post).toHaveBeenCalledWith("/auth/refresh");
     expect(window.localStorage.getItem("bh.session")).toBe("1");
   });

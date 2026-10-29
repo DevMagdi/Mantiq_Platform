@@ -8,6 +8,7 @@ import { Download, FileText, LogOut, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { MantiqLockup } from "@/components/BrandMark";
 import { Modal } from "@/components/Modal";
 import { Badge, Button, Card, SectionTitle, StateBlock } from "@/components/ui";
 import { useToast } from "@/components/Toast";
@@ -92,24 +93,28 @@ export default function PortalPage() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="text-white" style={{ background: "var(--sidebar)" }}>
+      <header className="text-sidebar-text" style={{ background: "var(--color-sidebar)" }}>
         <div className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-4 px-6 py-4">
           <div className="min-w-0">
-            <p className="text-[12.5px] text-white/60">{t("portal.brand")}</p>
+            {/* same lockup as the staff shell: mark + wordmark, then the brand line for this area */}
+            <MantiqLockup wordmark={t("common.appName")} size={26} tone="dark" className="mb-1.5" />
+            <p className="text-[12.5px]" style={{ color: "var(--color-sidebar-muted)" }}>
+              {t("portal.brand")}
+            </p>
             <h1 className="mt-0.5 truncate text-[19px] font-bold">{data.client.name ?? "—"}</h1>
-            <p className="mt-1 text-[12.5px] text-white/70">
+            <p className="mt-1 text-[12.5px]" style={{ color: "var(--color-sidebar-muted)" }}>
               {t("portal.greeting")} · {user?.full_name ?? ""} · {t("portal.role")}
             </p>
           </div>
           <div className="flex items-center gap-5">
             <div className="text-center" style={{ minWidth: 44 }}>
               <div className="text-[44px] font-bold leading-none tabular-nums">{formatNumber(covered)}</div>
-              <div className="mt-1 text-[11px] text-white/60">{t("leads.insured_count")}</div>
+              <div className="mt-1 text-[11px]" style={{ color: "var(--color-sidebar-muted)" }}>{t("leads.insured_count")}</div>
             </div>
             <button
               type="button"
               onClick={() => void logout()}
-              className="flex items-center gap-1.5 rounded-btn px-3 py-2 text-[12.5px] font-semibold text-white/80 transition duration-150 hover:bg-white/10 hover:text-white"
+              className="flex items-center gap-1.5 rounded-btn px-3 py-2 text-[12.5px] font-semibold text-sidebar-text transition duration-150 hover:bg-white/10 hover:text-sidebar-text"
             >
               <LogOut size={15} strokeWidth={1.8} />
               {t("portal.signOut")}
@@ -157,7 +162,7 @@ export default function PortalPage() {
                 <ul className="-mx-1">
                   {(requests.data?.items ?? []).map((row: PortalRequestItem) => (
                     <li key={String(row.id)} className="row-line flex items-start gap-3 px-1 py-3">
-                      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: "var(--primary-soft)", color: "var(--primary-ink)" }}>
+                      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full" style={{ background: "var(--color-accent-muted)", color: "var(--color-accent-ink)" }}>
                         <MessageSquare size={15} strokeWidth={1.8} />
                       </span>
                       <div className="min-w-0 flex-1">
@@ -283,7 +288,7 @@ export default function PortalPage() {
                         {doc.download_url ? (
                           <button
                             type="button"
-                            className="text-[12px] font-semibold text-primary"
+                            className="text-[12px] font-semibold text-accent-ink"
                             aria-label={t("common.download")}
                             onClick={() => void download(String(doc.download_url), String(doc.filename ?? "document.pdf"))}
                           >
@@ -325,7 +330,7 @@ function Ledger({ label, value, tone }: { label: string; value?: number | null; 
   return (
     <div className="flex items-center justify-between border-t border-line pt-2">
       <dt className="text-muted">{label}</dt>
-      <dd className="font-semibold tabular-nums" style={{ color: tone === "r" && Number(value ?? 0) > 0 ? "var(--r-ink)" : "var(--ink)" }}>
+      <dd className="font-semibold tabular-nums" style={{ color: tone === "r" && Number(value ?? 0) > 0 ? "var(--r-ink)" : "var(--color-ink)" }}>
         {value == null ? t("common.none") : formatMoney(value)}
       </dd>
     </div>

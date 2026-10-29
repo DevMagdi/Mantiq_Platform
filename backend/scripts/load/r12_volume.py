@@ -36,7 +36,7 @@ async def main() -> None:
     args = parser.parse_args()
     secret = os.getenv("R12_INBOUND_SECRET", "load-inbound-secret")
     async with get_sessionmaker()() as session:
-        manager = (await session.execute(select(User).where(User.email == "manager@brokerhub.test"))).scalar_one()
+        manager = (await session.execute(select(User).where(User.email == "manager@mantiq.test"))).scalar_one()
         await integrations_settings.update(session, manager, "email", secrets={"inbound_secret": secret})
         # WhatsApp signature verification in the intake storm verifies against this saved app_secret
         await integrations_settings.update(

@@ -77,7 +77,7 @@ function IssuingContent() {
                     <li key={stage.key} className="flex-1">
                       <span
                         className="block h-[5px] rounded-full transition-all duration-150"
-                        style={{ background: stageIndex <= index ? "var(--primary)" : "var(--line-2)" }}
+                        style={{ background: stageIndex <= index ? "var(--color-accent)" : "var(--color-border-strong)" }}
                         title={t(stage.label)}
                       />
                     </li>

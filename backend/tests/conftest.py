@@ -113,7 +113,7 @@ async def bootstrap(session: AsyncSession) -> None:
         ("owner", "client_owner"),
     ):
         user = User(
-            email=f"{key}@brokerhub.test",
+            email=f"{key}@mantiq.test",
             password_hash=hash_password(PASSWORD),
             full_name={"admin": "Admin", "manager": "Manager", "rep_a": "Rep A", "rep_b": "Rep B", "cs": "CS Agent", "owner": "Owner"}[key],
             role_id=roles[role_code].id,
@@ -164,7 +164,7 @@ async def ids(client) -> dict[str, dict[str, str]]:
     maker = get_sessionmaker()
     async with maker() as session:
         users = {
-            key: str((await session.execute(select(User).where(User.email == f"{key}@brokerhub.test"))).scalar_one().id)
+            key: str((await session.execute(select(User).where(User.email == f"{key}@mantiq.test"))).scalar_one().id)
             for key in ("admin", "manager", "rep_a", "rep_b", "cs", "owner")
         }
         leads = {

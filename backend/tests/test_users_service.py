@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-ADMIN = "admin@brokerhub.test"
+ADMIN = "admin@mantiq.test"
 PASSWORD = "Test-Pass-2026"
 
 
@@ -22,7 +22,7 @@ async def test_create_rep_with_scopes_and_login(client, ids) -> None:
             "/api/v1/users",
             headers=h,
             json={
-                "email": "new.rep@brokerhub.test",
+                "email": "new.rep@mantiq.test",
                 "password": PASSWORD,
                 "full_name": "زميلة جديدة",
                 "role_code": "sales_rep",
@@ -43,7 +43,7 @@ async def test_create_rep_with_scopes_and_login(client, ids) -> None:
         assert {s["id"] for s in row["scopes"]} == {ids["clients"]["ألف"]}
 
     # the new account can log in, and its scope is the seeded union, not the whole office
-    async with login(client, "new.rep@brokerhub.test") as rep:
+    async with login(client, "new.rep@mantiq.test") as rep:
         clients = await client.get("/api/v1/clients", headers=rep)
         assert clients.status_code == 200
         names = {c["name"] for c in clients.json()["items"]}
@@ -56,20 +56,20 @@ async def test_duplicate_email_unknown_role_and_weak_password_are_refused(client
         duplicate = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "rep_a@brokerhub.test", "password": PASSWORD, "full_name": "تكرار", "role_code": "sales_rep"},
+            json={"email": "rep_a@mantiq.test", "password": PASSWORD, "full_name": "تكرار", "role_code": "sales_rep"},
         )
         assert duplicate.status_code == 409
         unknown_role = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "ghost@brokerhub.test", "password": PASSWORD, "full_name": "شبح", "role_code": "vice_president"},
+            json={"email": "ghost@mantiq.test", "password": PASSWORD, "full_name": "شبح", "role_code": "vice_president"},
         )
         assert unknown_role.status_code == 422
         assert unknown_role.json()["code"] == "validation_failed"
         weak = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "weak@brokerhub.test", "password": "12345", "full_name": "ضعيف", "role_code": "sales_rep"},
+            json={"email": "weak@mantiq.test", "password": "12345", "full_name": "ضعيف", "role_code": "sales_rep"},
         )
         assert weak.status_code == 422  # rejected by the request model before the service runs
 
@@ -82,7 +82,7 @@ async def test_two_parallel_creates_with_the_same_email_answer_409_not_500(clien
     answer 409 with the same message the sequential path uses.
     """
     payload = {
-        "email": "race.rep@brokerhub.test",
+        "email": "race.rep@mantiq.test",
         "password": PASSWORD,
         "full_name": "سباق بياعين",
         "role_code": "sales_rep",
@@ -94,8 +94,8 @@ async def test_two_parallel_creates_with_the_same_email_answer_409_not_500(clien
         )
     assert {first.status_code, second.status_code} == {201, 409}, (first.status_code, second.status_code)
 
-    team_payload = {**payload, "email": "race.team@brokerhub.test"}
-    async with login(client, "manager@brokerhub.test") as h:
+    team_payload = {**payload, "email": "race.team@mantiq.test"}
+    async with login(client, "manager@mantiq.test") as h:
         team_first, team_second = await asyncio.gather(
             client.post("/api/v1/sales-team/members", headers=h, json=team_payload),
             client.post("/api/v1/sales-team/members", headers=h, json=team_payload),
@@ -108,19 +108,19 @@ async def test_deactivate_revokes_access_and_self_lockout_is_blocked(client, ids
         created = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "temp@brokerhub.test", "password": PASSWORD, "full_name": "مؤقت", "role_code": "customer_service"},
+            json={"email": "temp@mantiq.test", "password": PASSWORD, "full_name": "مؤقت", "role_code": "customer_service"},
         )
         temp_id = created.json()["id"]
 
         # the account works first, so the revocation below is the thing under test
-    async with login(client, "temp@brokerhub.test") as temp:
+    async with login(client, "temp@mantiq.test") as temp:
         assert (await client.get("/api/v1/requests", headers=temp)).status_code == 200
 
     async with login(client, ADMIN) as h:
         off = await client.patch(f"/api/v1/users/{temp_id}", headers=h, json={"is_active": False})
         assert off.status_code == 200
         assert off.json()["is_active"] is False
-        refused = await client.post("/api/v1/auth/login", json={"email": "temp@brokerhub.test", "password": PASSWORD})
+        refused = await client.post("/api/v1/auth/login", json={"email": "temp@mantiq.test", "password": PASSWORD})
         assert refused.status_code in (401, 403)
 
         # an admin cannot lock themselves out of their own instance
@@ -131,7 +131,7 @@ async def test_deactivate_revokes_access_and_self_lockout_is_blocked(client, ids
 
 async def test_refresh_rotates_and_logout_revokes_the_family(client) -> None:
     """The refresh cookie rotates; logging out kills the family, so the last token stops working."""
-    async with login(client, "cs@brokerhub.test"):
+    async with login(client, "cs@mantiq.test"):
         first = await client.post("/api/v1/auth/refresh")
         assert first.status_code == 200
         token_a = first.json()["access_token"]
@@ -150,17 +150,17 @@ async def test_password_change_forces_a_fresh_login(client) -> None:
         created = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "rotate@brokerhub.test", "password": PASSWORD, "full_name": "تدوير", "role_code": "customer_service"},
+            json={"email": "rotate@mantiq.test", "password": PASSWORD, "full_name": "تدوير", "role_code": "customer_service"},
         )
         user_id = created.json()["id"]
         changed = await client.patch(f"/api/v1/users/{user_id}", headers=h, json={"password": "Second-Pass-2026"})
         assert changed.status_code == 200
 
-    assert (await client.post("/api/v1/auth/login", json={"email": "rotate@brokerhub.test", "password": PASSWORD})).status_code in (
+    assert (await client.post("/api/v1/auth/login", json={"email": "rotate@mantiq.test", "password": PASSWORD})).status_code in (
         401,
         403,
     )
-    async with login(client, "rotate@brokerhub.test", "Second-Pass-2026"):
+    async with login(client, "rotate@mantiq.test", "Second-Pass-2026"):
         pass
 
 
@@ -190,7 +190,7 @@ async def test_roles_grid_and_permission_toggle_changes_access(client) -> None:
         assert granted.status_code == 200
         assert "clients.view_all" in granted.json()["permissions"]
 
-    async with login(client, "rep_a@brokerhub.test") as rep:
+    async with login(client, "rep_a@mantiq.test") as rep:
         everyone = await client.get("/api/v1/clients", headers=rep)
         assert everyone.status_code == 200
         assert {c["name"] for c in everyone.json()["items"]} == {"شركة ألف", "شركة باء"}
@@ -220,7 +220,7 @@ async def test_a_blank_password_makes_the_server_generate_one_that_actually_work
         created = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "generated@brokerhub.test", "full_name": "عضو بتوليد", "role_code": "sales_rep"},
+            json={"email": "generated@mantiq.test", "full_name": "عضو بتوليد", "role_code": "sales_rep"},
         )
         assert created.status_code == 201, created.text
         body = created.json()
@@ -228,7 +228,7 @@ async def test_a_blank_password_makes_the_server_generate_one_that_actually_work
         assert temp and len(temp) >= 10
         assert any(c.isdigit() for c in temp) and any(c.isupper() for c in temp) and any(c.islower() for c in temp)
 
-    async with login(client, "generated@brokerhub.test", temp) as new_user:
+    async with login(client, "generated@mantiq.test", temp) as new_user:
         me = await client.get("/api/v1/auth/me", headers=new_user)
         assert (
             sorted(me.json()["permissions"]) == sorted(ALL_PERMISSIONS[i] for i in range(len(ALL_PERMISSIONS)) if i == -1)
@@ -239,7 +239,7 @@ async def test_a_blank_password_makes_the_server_generate_one_that_actually_work
 
     async with get_sessionmaker()() as session:
         entry = (await session.execute(select(AuditLog).where(AuditLog.action == "user.created"))).scalars().all()[-1]
-        assert entry.after["email"] == "generated@brokerhub.test"
+        assert entry.after["email"] == "generated@mantiq.test"
         assert "password" not in str(entry.after).lower(), "the audit row must not carry a secret"
 
 
@@ -250,7 +250,7 @@ async def test_a_manager_may_open_the_account_inactive(client) -> None:
             "/api/v1/users",
             headers=h,
             json={
-                "email": "pending@brokerhub.test",
+                "email": "pending@mantiq.test",
                 "password": PASSWORD,
                 "full_name": "بانتظار",
                 "role_code": "sales_rep",
@@ -259,12 +259,12 @@ async def test_a_manager_may_open_the_account_inactive(client) -> None:
         )
         assert created.status_code == 201
         assert created.json()["id"]
-        refused = await client.post("/api/v1/auth/login", json={"email": "pending@brokerhub.test", "password": PASSWORD})
+        refused = await client.post("/api/v1/auth/login", json={"email": "pending@mantiq.test", "password": PASSWORD})
         assert refused.status_code in (401, 403)
         user_id = created.json()["id"]
         on = await client.patch(f"/api/v1/users/{user_id}", headers=h, json={"is_active": True})
         assert on.json()["is_active"] is True
-    async with login(client, "pending@brokerhub.test"):
+    async with login(client, "pending@mantiq.test"):
         pass  # activating it from the same dialog is the other half of the switch
 
 
@@ -274,7 +274,7 @@ async def test_a_portal_role_cannot_be_created_without_a_client(client) -> None:
         refused = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "orphan@brokerhub.test", "password": PASSWORD, "full_name": "يتيم", "role_code": "client_owner"},
+            json={"email": "orphan@mantiq.test", "password": PASSWORD, "full_name": "يتيم", "role_code": "client_owner"},
         )
         assert refused.status_code == 422, refused.text
         assert refused.json()["details"]["role_code"] == "client_owner"
@@ -286,10 +286,10 @@ async def test_changing_a_role_changes_what_the_person_can_do(client) -> None:
         created = await client.post(
             "/api/v1/users",
             headers=h,
-            json={"email": "promoted@brokerhub.test", "password": PASSWORD, "full_name": "ترقية", "role_code": "sales_rep"},
+            json={"email": "promoted@mantiq.test", "password": PASSWORD, "full_name": "ترقية", "role_code": "sales_rep"},
         )
         user_id = created.json()["id"]
-    async with login(client, "promoted@brokerhub.test") as rep:
+    async with login(client, "promoted@mantiq.test") as rep:
         assert (await client.get("/api/v1/users", headers=rep)).status_code == 403
         assert (await client.get("/api/v1/sales/team", headers=rep)).status_code == 403
 
@@ -297,7 +297,7 @@ async def test_changing_a_role_changes_what_the_person_can_do(client) -> None:
         promoted = await client.patch(f"/api/v1/users/{user_id}", headers=h, json={"role_code": "sales_manager"})
         # the answer describes the row as it now is — not the role the request replaced
         assert promoted.json()["role"] == "sales_manager"
-    async with login(client, "promoted@brokerhub.test") as manager:
+    async with login(client, "promoted@mantiq.test") as manager:
         me = await client.get("/api/v1/auth/me", headers=manager)
         assert {"leads.view_all", "leads.assign"} <= set(me.json()["permissions"])
         assert (await client.get("/api/v1/sales/team", headers=manager)).status_code == 200

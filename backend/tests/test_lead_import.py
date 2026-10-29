@@ -17,9 +17,9 @@ from sqlalchemy import func, select
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
-ADMIN = "admin@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
+ADMIN = "admin@mantiq.test"
 #: +201000000001 belongs to rep_a's lead in the fixture graph (`conftest.bootstrap`)
 TAKEN_MOBILE = "01000000001"
 

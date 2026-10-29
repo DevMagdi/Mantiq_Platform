@@ -4,14 +4,14 @@ import { expect, type APIRequestContext, type Page } from "@playwright/test";
 export const API_ORIGIN = process.env.VITE_API_ORIGIN ?? "http://127.0.0.1:8000";
 
 /** Demo credentials come from `python -m app.seed` — fictitious people only (spec rule 4). */
-export const PASSWORD = "Br0kerHub!2026";
+export const PASSWORD = "Mantiq!2026";
 export const REPS = {
-  sara: "sara.elsayed@brokerhub.test",
-  nour: "nour.fahmy@brokerhub.test",
+  sara: "sara.elsayed@mantiq.test",
+  nour: "nour.fahmy@mantiq.test",
 } as const;
-export const MANAGER = "manager@brokerhub.test";
+export const MANAGER = "manager@mantiq.test";
 /** `users.manage` is the system-admin role's own — the users tab inside the settings hub needs it (ADR-016). */
-export const ADMIN = "admin@brokerhub.test";
+export const ADMIN = "admin@mantiq.test";
 export const OWNER = "owner.mantiq@company.test";
 
 export const LOGIN_BUTTON = { name: "تسجيل الدخول", exact: true } as const;
@@ -43,7 +43,7 @@ export async function apiLogin(request: APIRequestContext, email: string, passwo
  * person: a sales rep has no `requests.view`, so `/inbox` is a 403 for them and the queue is empty by
  * design. `CS` is the role the inbox belongs to (18 of the seeded 24 requests, `manager` sees all 24).
  */
-export const CS = "cs@brokerhub.test";
+export const CS = "cs@mantiq.test";
 
 /** Open a request from the inbox queue (the first row that matches, or the first row at all). */
 export async function openFirstRequest(page: Page) {

@@ -1,20 +1,56 @@
-/** Design tokens are CSS variables (spec §4) so the palette has exactly one source of truth. */
+/**
+ * Mantiq design tokens (ADR-034). Every colour is a CSS variable from `src/styles/tokens.css` — this
+ * file maps names, it never holds a hex. The semantic names are the ones new code should use
+ * (`surface`, `accent`, `on-accent`, `ink`, …); the legacy names (`card`, `bg`, `primary`, …) stay
+ * mapped to the same variables so the 60 existing screens keep working without a fork in the palette.
+ */
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        bg: "var(--bg)",
+        // ── semantic ─────────────────────────────────────────────────────────────────────────────
+        bg: "var(--color-bg)",
+        surface: "var(--color-surface)",
+        ink: { DEFAULT: "var(--color-ink)", strong: "var(--color-ink-strong)" },
+        muted: "var(--color-muted)",
+        border: { DEFAULT: "var(--color-border)", strong: "var(--color-border-strong)" },
+        track: "var(--color-track)",
+        accent: {
+          DEFAULT: "var(--color-accent)",
+          hover: "var(--color-accent-hover)",
+          muted: "var(--color-accent-muted)",
+          ink: "var(--color-accent-ink)",
+        },
+        "on-accent": "var(--color-on-accent)",
+        "on-dark": "var(--color-on-dark)",
+        focus: "var(--color-focus)",
+        chart: {
+          1: "var(--color-chart-1)",
+          2: "var(--color-chart-2)",
+          3: "var(--color-chart-3)",
+          grid: "var(--color-chart-grid)",
+        },
+        sidebar: {
+          DEFAULT: "var(--color-sidebar)",
+          text: "var(--color-sidebar-text)",
+          active: "var(--color-sidebar-active)", // gold label / gold indicator
+          "active-bg": "var(--color-sidebar-active-bg)", // soft gold fill behind it
+          hover: "var(--color-sidebar-hover)",
+          muted: "var(--color-sidebar-muted)",
+          line: "var(--color-sidebar-line)",
+        },
+        // ── legacy aliases (same variables, never a second value) ───────────────────────────────
         card: "var(--card)",
-        ink: "var(--ink)",
-        muted: "var(--muted)",
-        line: "var(--line)",
+        line: { DEFAULT: "var(--line)", 2: "var(--line-2)" },
         "line-2": "var(--line-2)",
-        sidebar: "var(--sidebar)",
-        "sidebar-active": "var(--sidebar-active)",
         "sidebar-text": "var(--sidebar-text)",
-        primary: { DEFAULT: "var(--primary)", hover: "var(--primary-hover)", soft: "var(--primary-soft)", ink: "var(--primary-ink)" },
-        soft: "var(--soft-bg)",
+        primary: {
+          DEFAULT: "var(--primary)",
+          hover: "var(--primary-hover)",
+          soft: "var(--primary-soft)",
+          ink: "var(--primary-ink)",
+        },
         teal: "var(--teal)",
         kanban: "var(--kanban-col)",
         "row-warn": "var(--row-warn)",
@@ -29,7 +65,8 @@ export default {
         sans: ['"IBM Plex Sans Arabic"', '"IBM Plex Sans"', "system-ui", "sans-serif"],
       },
       borderRadius: { card: "18px", btn: "12px", field: "12px", pill: "999px" },
-      boxShadow: { card: "var(--shadow)", pop: "0 12px 32px rgba(16,24,40,.12)" },
+      boxShadow: { card: "var(--shadow)", pop: "var(--shadow-pop)" },
+      backgroundImage: { mark: "var(--gradient-mark)" },
       fontSize: {
         base: ["14px", "22px"],
         page: ["24px", "32px"],

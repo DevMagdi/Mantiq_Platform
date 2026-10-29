@@ -52,7 +52,7 @@ async function open(page: Page, screen: Screen) {
 
 test.describe("screen grid (spec §9)", () => {
   test("the Phase-2 screens stay gated until the flag is on", async ({ page, request }) => {
-    const auth = await apiLogin(request, "admin@brokerhub.test");
+    const auth = await apiLogin(request, "admin@mantiq.test");
     const before = await request.patch("/api/v1/feature-flags/phase2.enabled", { headers: auth, data: { enabled: false } });
     expect(before.status(), await before.text()).toBe(200);
 

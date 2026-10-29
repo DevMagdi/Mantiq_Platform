@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Broker Hub — Live QA matrix.
+"""Mantiq (منطق) — Live QA matrix.
 
 Walks every path in the "Live v1" scope against the real FastAPI app (in-process ASGI) on a freshly seeded
 database, as each role, and records status codes. Anything 500 (or an unexpected 4xx on a critical happy
@@ -50,11 +50,11 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 ZERO_UUID = "00000000-0000-4000-8000-000000000000"
 PASSWORD = "Qa-Pass-2026"
-MANAGER = "manager@brokerhub.test"
-ADMIN = "admin@brokerhub.test"
-CS = "cs@brokerhub.test"
-REP = "nour.fahmy@brokerhub.test"
-OTHER_REP = "sara.elsayed@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+ADMIN = "admin@mantiq.test"
+CS = "cs@mantiq.test"
+REP = "nour.fahmy@mantiq.test"
+OTHER_REP = "sara.elsayed@mantiq.test"
 OWNER = "owner.mantiq@company.test"
 
 results: list[dict[str, Any]] = []
@@ -102,7 +102,7 @@ async def main() -> int:
         # ------------------------------------------------------------------ 4.2 auth
         bad = await c.post("/api/v1/auth/login", json={"email": MANAGER, "password": "wrong-password"})
         check("auth", "login with a wrong password → 401", bad, 401, p0=True)
-        unknown = await c.post("/api/v1/auth/login", json={"email": "ghost@brokerhub.test", "password": PASSWORD})
+        unknown = await c.post("/api/v1/auth/login", json={"email": "ghost@mantiq.test", "password": PASSWORD})
         check("auth", "login for an unknown e-mail → 401", unknown, 401, p0=True)
         empty = await c.post("/api/v1/auth/login", json={"email": "", "password": ""})
         check("auth", "login with empty fields → 422", empty, (401, 422))
@@ -290,7 +290,7 @@ async def main() -> int:
             bool(roles) and roles[0]["code"] == "sales_rep",
             json.dumps([r["code"] for r in roles]),
         )
-        seat_email = f"qa-seat-{int(datetime.now(UTC).timestamp())}@brokerhub.test"
+        seat_email = f"qa-seat-{int(datetime.now(UTC).timestamp())}@mantiq.test"
         new_seat = await c.post(
             "/api/v1/sales-team/members",
             headers=mgr,
@@ -309,7 +309,7 @@ async def main() -> int:
             await c.post(
                 "/api/v1/sales-team/members",
                 headers=mgr,
-                json={"full_name": "أدمن", "email": "qa-admin@brokerhub.test", "role_code": "system_admin"},
+                json={"full_name": "أدمن", "email": "qa-admin@mantiq.test", "role_code": "system_admin"},
             ),
             (403, 422),
             p0=True,
@@ -444,7 +444,7 @@ async def main() -> int:
             headers=admin,
             json={
                 "full_name": "مستخدم QA",
-                "email": f"qa-user-{int(datetime.now(UTC).timestamp())}@brokerhub.test",
+                "email": f"qa-user-{int(datetime.now(UTC).timestamp())}@mantiq.test",
                 "role_code": "sales_rep",
                 "password": "Qa-User-Pass-2026",
             },
@@ -1305,7 +1305,7 @@ async def main() -> int:
         race_clients = (await get("/api/v1/clients?q=سباق التحويل QA&page_size=50", mgr)).json().get("total")
         record("race", "exactly one client exists for that lead", race_clients == 1, f"total={race_clients}", p0=True)
 
-        race_email = f"race-{int(datetime.now(UTC).timestamp() * 1000)}@brokerhub.test"
+        race_email = f"race-{int(datetime.now(UTC).timestamp() * 1000)}@mantiq.test"
         member = {"full_name": "سباق عضو", "email": race_email, "role_code": "sales_rep", "password": "Race-Pass-2026"}
         await _race(
             "race",

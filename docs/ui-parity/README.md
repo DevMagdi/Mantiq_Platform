@@ -10,21 +10,26 @@
 
 | ما يُقاس | الأداة | الأمر |
 | --- | --- | --- |
-| قيم التوكنات (ألوان/أرقام) | اختبار ثابت | `cd frontend && npx vitest run tests/tokens.test.ts` — 20 تأكيدًا يقارن `src/styles/tokens.css` بنصّ §4 حرفيًا |
+| قيم التوكنات (ألوان/أرقام) | اختبار ثابت | `cd frontend && npx vitest run tests/tokens.test.ts` — يقارن `src/styles/tokens.css` بلوحة Mantiq (ADR-034) وبأرقام §4 غير اللونية (18/12/999/150ms/الخط)، ويُفشل أي أثر للهوية القديمة داخل `src/` |
 | نسخ الواجهة العربي/الإنجليزي | اختبار parity | `npx vitest run tests/i18n-parity.test.ts` — نفس المفاتيح في `ar.ts` و`en.ts`، وقيَم `ar.ts` منسوخة من الورقة |
 | سلوك كل شاشة (عزل، تحويل، استيراد، بورتال…) | Playwright | `cd frontend && npm run e2e` (110 اختبارًا، desktop 1440×900 + mobile 390×844) |
-| Pixel-level بصريًا | لقطات + contact sheet | تُنتَج في CI إلى `docs/screenshots/` وتُراجَع يدويًا — **لا يوجد حكم آلي على البيكسل** |
+| الهوية البصرية | Playwright | `npx playwright test e2e/brand.spec.ts` — ألوان محسوبة: الشريط `rgb(14,23,40)`، العنصر النشط ذهبي مع مؤشّر على الحافة الابتدائية، زر أساسي ذهبي نصّه Navy، العنوان والأيقونات |
+| Pixel-level بصريًا | لقطات + contact sheet | تُنتَج في CI إلى `docs/screenshots/`، ولقطات الهوية في [`mantiq-brand/`](mantiq-brand/README.md) — **لا يوجد حكم آلي على البيكسل** |
 
-## خلاصة التحقق من §4 (تمت الآن)
+## خلاصة التحقق (تمت الآن)
+
+> **ملاحظة R13:** لوحة §4 اللونية (الإنديغو `#4F46E5`، الصفحة `#F3F4F9`، الشريط `#0E1424`، أزواج الشارات)
+> **أُحيلت** كـ«هوية» بقرار ADR-034، وحلّت محلها لوحة Mantiq. ما بقي منها ساريًا هو الأرقام غير اللونية
+> (الهندسة والخط والمقاسات) وهي ما يثبته الاختبار الآن.
 
 | البند | القيمة المطلوبة | في الكود | الحالة |
 | --- | --- | --- | --- |
-| خلفية / أساسي / سوفت / سايدبار | `#F3F4F9` `#4F46E5` `#EEF0FF` `#0E1424` | `tokens.css` | ✓ محكوم باختبار |
-| شارات (g/a/r/b/t) | `#05603A/#F0FDF4` `#92400E/#FFFAEB` `#B42318/#FEF3F2` `#175CD3/#EFF6FF` `#0F766E/#ECFDF5` | `tokens.css` + `Badge` يستخدم `var(--x-bg)/var(--x-ink)` | ✓ محكوم باختبار |
-| عمود الكانبان / صفوف تحذير/نجاح | `#E9ECF6` `#FFFAEB` `#F4FBF7` | `--kanban-col/--row-warn/--row-ok` | ✓ (صُحّح `--row-warn` من `#FFFBEB` إلى `#FFFAEB`) |
+| لوحة Mantiq (ADR-034) | Navy `#16273B` · Deep `#0E1728` · Network `#243553` · Gold `#BDA77E` · Light `#E3D2A8` · Dark `#8F7A52` · On-dark `#E8E2D4`؛ صفحة `#FAFBFC` وسطح `#FFFFFF` | `tokens.css` | ✓ محكوم باختبار (ويُفشل أي hex من الهوية القديمة) |
+| شارات (g/a/r/b/t) | أزواج الحالة الدلالية: `#1B5E3A/#EEF6F0` · `#8A5A12/#FDF6EA` · `#A32A22/#FDF0EF` · `#1F4E8C/#EDF2F9` · `#17565F/#ECF3F4` | `tokens.css` + `Badge` يستخدم `var(--x-bg)/var(--x-ink)` | ✓ محكوم باختبار |
+| عمود الكانبان / صفوف تحذير/نجاح | `rgba(22,39,59,.08)` · `#FDF6EA` · `#EEF6F0` | `--color-track/--row-warn/--row-ok` | ✓ |
 | خط وحجم | IBM Plex Sans Arabic 14px | `@fontsource` + `fontFamily.sans` + `text-base` | ✓ |
 | كارت / زر / شارة / بحث / أفاتار | 18 و18×20 · 12 و11×18 و600 · 999 و12/600 و3×10 · 260 · 38 و`#C7D2FE` | `tailwind.config.js` + `index.css` + `ui.tsx` | ✓ |
-| صفوف / محتوى / أيقونات / حركة / focus | border-top 1px `--line` و12×4 · 24×30 · lucide 20/1.8 · 150ms · حلقة 2px `--primary` | `.row-line`, `.content-pad`, `strokeWidth={1.8}`, `transitionDuration`, `:focus-visible` | ✓ |
+| صفوف / محتوى / أيقونات / حركة / focus | border-top 1px `--color-border` و12×4 · 24×30 · lucide 20/1.8 · 150ms · حلقة 2px `--color-focus` (Gold Dark) | `.row-line`, `.content-pad`, `strokeWidth={1.8}`, `transitionDuration`, `:focus-visible` | ✓ |
 | RTL منطقي | `ps-/pe-/text-start/insetInlineStart` | مستخدم في كل الشاشات + `<html dir="rtl" lang="ar">` | ✓ (اختبار `dashboard.spec.ts` يتحقق من `dir` وموضع الشريط الجانبي) |
 
 انحرافان صُحّحا أثناء هذه المراجعة (وليسا اختياريتين):

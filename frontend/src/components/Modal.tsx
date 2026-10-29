@@ -41,7 +41,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-40 grid place-items-center overflow-y-auto overscroll-contain bg-[rgba(16,24,40,.5)] p-4"
+      className="fixed inset-0 z-40 grid place-items-center overflow-y-auto overscroll-contain bg-[rgba(14,23,40,.55)] p-4"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -57,7 +57,7 @@ export function Modal({
           <h2 className="text-card font-semibold text-ink">{title}</h2>
           <button
             type="button"
-            className="grid h-8 w-8 place-items-center rounded-full text-muted transition-colors duration-150 hover:bg-[#F3F4F9] hover:text-ink"
+            className="grid h-8 w-8 place-items-center rounded-full text-muted transition-colors duration-150 hover:bg-track hover:text-ink"
             onClick={onClose}
             // «إغلاق» is also the footer action's own label, so an accessible query for the dialog's close
             // button resolved to two elements and failed in strict mode — the X is named for what it does

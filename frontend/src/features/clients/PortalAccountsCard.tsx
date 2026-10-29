@@ -167,7 +167,7 @@ export function PortalAccountsCard({ clientId }: { clientId: string }) {
             that shows two fields and a copy button leaves them to compose the message themselves — with the
             password pasted into the wrong chat (R7). The block is select-all, and the warning is next to it.
           */}
-          <div className="mt-3 rounded-btn border border-line bg-[var(--kanban-col)] p-3">
+          <div className="mt-3 rounded-btn border border-line bg-[var(--color-track)] p-3">
             <div className="flex items-center justify-between gap-2">
               <span className="text-[12px] font-semibold text-ink">{t("clients.portal.handoffTitle")}</span>
               <Button

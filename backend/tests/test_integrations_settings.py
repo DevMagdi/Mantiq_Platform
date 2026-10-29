@@ -21,9 +21,9 @@ from app.models.masters import FeatureFlag
 from app.models.requests import AuditLog
 from sqlalchemy import select
 
-ADMIN = "admin@brokerhub.test"
-MANAGER = "manager@brokerhub.test"
-REP = "rep_a@brokerhub.test"
+ADMIN = "admin@mantiq.test"
+MANAGER = "manager@mantiq.test"
+REP = "rep_a@mantiq.test"
 
 
 @pytest.fixture(autouse=True)
@@ -573,7 +573,7 @@ async def test_two_clicks_at_once_flip_once_and_both_answer_200(client: Any, ses
         await client.put(
             "/api/v1/settings/integrations/email",
             headers=h,
-            json={"config": {"host": "smtp.test", "from_email": "no-reply@brokerhub.test"}, "secrets": {"password": "PW"}},
+            json={"config": {"host": "smtp.test", "from_email": "no-reply@mantiq.test"}, "secrets": {"password": "PW"}},
         )
         first, second = await asyncio.gather(
             client.post("/api/v1/settings/integrations/email/live", headers=h, json={"is_live": True, "confirm": True}),

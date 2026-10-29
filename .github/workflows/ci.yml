@@ -272,7 +272,7 @@ jobs:
           step "the SPA's /api proxy reaches the API"
           # an unknown credential must be answered by the API (401 unauthorized), never by nginx (404 page)
           code=$(curl -s -o /tmp/login.json -w '%{http_code}' -X POST localhost:5173/api/v1/auth/login \
-            -H 'content-type: application/json' -d '{"email":"nobody@brokerhub.test","password":"wrong-password"}')
+            -H 'content-type: application/json' -d '{"email":"nobody@mantiq.test","password":"wrong-password"}')
           cat /tmp/login.json; echo
           test "$code" = "401" || { echo "proxy answered $code, not the API's 401"; exit 1; }
           echo '  the proxy answered with the API body (401)'
@@ -286,7 +286,7 @@ jobs:
             || docker compose -f infra/docker-compose.yml logs --tail=80 backend
           TOKEN=$(curl -fsS -X POST localhost:5173/api/v1/auth/login \
             -H 'content-type: application/json' \
-            -d "{\"email\":\"admin@brokerhub.test\",\"password\":\"$SEED_PASSWORD\"}" \
+            -d "{\"email\":\"admin@mantiq.test\",\"password\":\"$SEED_PASSWORD\"}" \
             | python3 -c "import json,sys;print(json.load(sys.stdin)['access_token'])")
           # `page_size` (1..200) is the documented page control; `limit` is not a parameter of this route.
           curl -fsS "localhost:5173/api/v1/clients?page_size=1" -H "authorization: Bearer $TOKEN" -o /tmp/clients.json

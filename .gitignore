@@ -1,0 +1,50 @@
+# --- Python -------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# --- Node / Vite --------------------------------------------------------------
+node_modules/
+dist/
+.vite/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+
+# --- Test output --------------------------------------------------------------
+# Playwright reports, traces, videos and failure snapshots are CI artifacts.
+playwright-report/
+test-results/
+blob-report/
+
+# Screenshots produced by e2e/screenshots.spec.ts and e2e/r6-evidence.spec.ts land here as run
+# artifacts (CI uploads them). Curated sets live in sub-folders and stay tracked.
+docs/screenshots/*.png
+docs/screenshots/*.webm
+!docs/screenshots/score8/
+
+# --- Local databases and file storage ----------------------------------------
+# The demo database is created by `alembic upgrade head && python -m app.seed`.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.e2e-storage/
+backend/storage/
+backend/media/
+
+# --- OS / editor --------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

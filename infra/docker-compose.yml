@@ -26,7 +26,7 @@ x-backend-env: &backend-env
   CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
   # outbound mail lands in mailpit below — nothing leaves the laptop in local runs (spec §3)
   SMTP_URL: ${SMTP_URL:-smtp://mailpit:1025}
-  EMAIL_FROM: ${EMAIL_FROM:-no-reply@brokerhub.local}
+  EMAIL_FROM: ${EMAIL_FROM:-no-reply@mantiq.local}
   # Secrets saved from the settings screen are encrypted with this. Empty in local runs is fine (it is then
   # derived from JWT_SECRET); a production deploy must set it — the API refuses to boot without it (ADR-016).
   SECRETS_ENCRYPTION_KEY: ${SECRETS_ENCRYPTION_KEY:-}

@@ -8,7 +8,7 @@ pytestmark = pytest.mark.integration
 
 
 async def test_login_returns_access_token_and_profile(client, ids) -> None:
-    async with login(client, "rep_a@brokerhub.test") as h:
+    async with login(client, "rep_a@mantiq.test") as h:
         me = (await client.get("/api/v1/auth/me", headers=h)).json()
         assert me["role"] == "sales_rep"
         assert me["scope_mode"] == "owner"
@@ -17,7 +17,7 @@ async def test_login_returns_access_token_and_profile(client, ids) -> None:
 
 
 async def test_wrong_password_is_401(client) -> None:
-    response = await client.post("/api/v1/auth/login", json={"email": "rep_a@brokerhub.test", "password": "nope"})
+    response = await client.post("/api/v1/auth/login", json={"email": "rep_a@mantiq.test", "password": "nope"})
     assert response.status_code == 401
     assert response.json()["code"] == "unauthorized"
 
@@ -26,18 +26,18 @@ async def test_brute_force_lockout(client) -> None:
     from app.core.config import get_settings
     from app.services import auth
 
-    auth.clear_failures("rep_a@brokerhub.test|local")
+    auth.clear_failures("rep_a@mantiq.test|local")
     limit = get_settings().LOGIN_MAX_ATTEMPTS
     for _ in range(limit):
-        assert (await client.post("/api/v1/auth/login", json={"email": "rep_a@brokerhub.test", "password": "x"})).status_code == 401
-    locked = await client.post("/api/v1/auth/login", json={"email": "rep_a@brokerhub.test", "password": "x"})
+        assert (await client.post("/api/v1/auth/login", json={"email": "rep_a@mantiq.test", "password": "x"})).status_code == 401
+    locked = await client.post("/api/v1/auth/login", json={"email": "rep_a@mantiq.test", "password": "x"})
     assert locked.status_code == 429
     assert "locked" in locked.json()["message"].lower()
-    auth.clear_failures("rep_a@brokerhub.test|local")
+    auth.clear_failures("rep_a@mantiq.test|local")
 
 
 async def test_refresh_rotates_and_invalidates_reuse(client) -> None:
-    login_response = await client.post("/api/v1/auth/login", json={"email": "manager@brokerhub.test", "password": PASSWORD})
+    login_response = await client.post("/api/v1/auth/login", json={"email": "manager@mantiq.test", "password": PASSWORD})
     refresh_cookie = login_response.cookies.get("bh_refresh")
     assert refresh_cookie, "refresh token must be an HttpOnly cookie"
     first = await client.post("/api/v1/auth/refresh", cookies={"bh_refresh": refresh_cookie})
@@ -61,7 +61,7 @@ async def test_password_hashing_does_not_block_the_event_loop(client, monkeypatc
     Argon2 costs ~110 ms per check, so running it inline means a handful of simultaneous logins is a
     self-inflicted outage: measured before the fix, 16 concurrent wrong passwords held `/healthz` for
     **1.24 s**, and a CI e2e run lost 21 mobile tests to 20 s timeouts in exactly that window
-    (`settings.spec.ts` reported `login failed for manager@brokerhub.test`).
+    (`settings.spec.ts` reported `login failed for manager@mantiq.test`).
 
     Two assertions, neither of which measures how fast the machine is:
 
@@ -89,7 +89,7 @@ async def test_password_hashing_does_not_block_the_event_loop(client, monkeypatc
         return False
 
     monkeypatch.setattr(security, "verify_password", slow_verify)
-    auth.clear_failures("rep_a@brokerhub.test|local")
+    auth.clear_failures("rep_a@mantiq.test|local")
     # a baseline first: CI's runners are busy, so an absolute millisecond limit measures the machine,
     # not the code — what matters is the *extra* wait the hashes add on top of it.
     base_ms = 0.0
@@ -100,7 +100,7 @@ async def test_password_hashing_does_not_block_the_event_loop(client, monkeypatc
     try:
         # 4 concurrent failures stay under LOGIN_MAX_ATTEMPTS (5)
         logins = [
-            asyncio.create_task(client.post("/api/v1/auth/login", json={"email": "rep_a@brokerhub.test", "password": "x"}))
+            asyncio.create_task(client.post("/api/v1/auth/login", json={"email": "rep_a@mantiq.test", "password": "x"}))
             for _ in range(4)
         ]
         await asyncio.sleep(0.05)  # let them all reach the hasher
@@ -113,4 +113,4 @@ async def test_password_hashing_does_not_block_the_event_loop(client, monkeypatc
         added_ms = waited_ms - base_ms
         assert added_ms < 500, f"/healthz waited {waited_ms:.0f} ms (baseline {base_ms:.0f} ms) behind the password hashes"
     finally:
-        auth.clear_failures("rep_a@brokerhub.test|local")
+        auth.clear_failures("rep_a@mantiq.test|local")

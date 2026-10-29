@@ -32,9 +32,9 @@ from typing import Any
 import httpx
 
 BASE = "http://127.0.0.1:8020"
-PASSWORD = "Br0kerHub!2026"
-MANAGER = "manager@brokerhub.test"
-CS = "cs@brokerhub.test"
+PASSWORD = "Mantiq!2026"
+MANAGER = "manager@mantiq.test"
+CS = "cs@mantiq.test"
 PG_SOCKET = "/tmp/r8pg"
 
 

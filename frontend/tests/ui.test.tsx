@@ -11,11 +11,13 @@ describe("design tokens in shared primitives", () => {
     expect(badge).toHaveStyle({ background: "var(--g-bg)", color: "var(--g-ink)" });
   });
 
-  it("keeps the avatar at the sheet's 38px and #C7D2FE", () => {
+  it("keeps the avatar at 38px, tinted from the gold token (ADR-034: no leftover indigo fill)", () => {
     const { container } = render(<Avatar name="منى فؤاد" />);
     const avatar = container.firstElementChild as HTMLElement;
     expect(avatar).toHaveTextContent("مف");
-    expect(avatar).toHaveStyle({ width: "38px", height: "38px", background: "#C7D2FE" });
+    expect(avatar).toHaveStyle({ width: "38px", height: "38px", background: "var(--color-accent-muted)" });
+    // the initials sit in Deep Navy, not on the old indigo fill
+    expect(avatar.className).toContain("text-ink-strong");
   });
 
   it("every state block explains itself instead of going blank (spec §9)", () => {

@@ -149,7 +149,7 @@ export default function NewLeadPage() {
                   key={option}
                   type="button"
                   onClick={() => setValue("type", option, { shouldDirty: true })}
-                  className={`rounded-pill px-3 py-1 text-[13px] font-semibold transition ${type === option ? "bg-primary text-white" : "text-muted"}`}
+                  className={`rounded-pill px-3 py-1 text-[13px] font-semibold transition ${type === option ? "bg-accent text-on-accent" : "text-muted"}`}
                 >
                   {t(`newLead.${option}`)}
                 </button>
@@ -183,8 +183,8 @@ export default function NewLeadPage() {
             <p
               className="mt-4 flex items-center gap-2 rounded-btn px-3 py-2 text-[12.5px] font-semibold"
               style={{
-                background: banner.tone === "warn" ? "var(--a-bg)" : banner.tone === "ok" ? "var(--g-bg)" : "#F3F4F9",
-                color: banner.tone === "warn" ? "var(--a-ink)" : banner.tone === "ok" ? "var(--g-ink)" : "var(--muted)",
+                background: banner.tone === "warn" ? "var(--a-bg)" : banner.tone === "ok" ? "var(--g-bg)" : "var(--color-track)",
+                color: banner.tone === "warn" ? "var(--a-ink)" : banner.tone === "ok" ? "var(--g-ink)" : "var(--color-muted)",
               }}
               role="status"
             >

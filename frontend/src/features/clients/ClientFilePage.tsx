@@ -184,7 +184,7 @@ function OverviewTab({
             onRowClick={(row) => navigate(`/inbox/${row.id}`)}
             empty={<StateBlock kind="empty" title={t("clients.insured.kpiRequests")} body={t("portal.empty")} />}
             columns={[
-              { id: "number", head: t("inbox.request"), width: 80, render: (row) => <span className="font-bold text-primary">#{row.number}</span> },
+              { id: "number", head: t("inbox.request"), width: 80, render: (row) => <span className="font-bold text-accent-ink">#{row.number}</span> },
               { id: "subject", head: t("inbox.details"), render: (row) => <span className="text-[13px] text-ink">{row.subject}</span> },
               { id: "channel", head: t("dashboard.colChannel"), width: 100, render: (row) => t(`channel.${row.channel}`) },
               {
@@ -253,7 +253,7 @@ function RequestsTab({ clientId }: { clientId: string }) {
           rowTone={(row) => (row.is_overdue ? "warn" : undefined)}
           empty={<StateBlock kind="empty" body={t("portal.empty")} />}
           columns={[
-            { id: "number", head: t("inbox.request"), width: 80, render: (row) => <span className="font-bold text-primary">#{row.number}</span> },
+            { id: "number", head: t("inbox.request"), width: 80, render: (row) => <span className="font-bold text-accent-ink">#{row.number}</span> },
             { id: "subject", head: t("inbox.details"), render: (row) => row.subject },
             { id: "employee", head: t("dashboard.colEmployee"), width: 150, render: (row) => row.employee_name ?? "—" },
             { id: "channel", head: t("dashboard.colChannel"), width: 100, render: (row) => t(`channel.${row.channel}`) },
@@ -350,7 +350,7 @@ function DocumentsTab({ clientId }: { clientId: string }) {
               align: "end",
               render: (row) =>
                 row.url ? (
-                  <a href={row.url} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-primary hover:underline">
+                  <a href={row.url} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-accent-ink hover:underline">
                     {t("common.open")}
                   </a>
                 ) : (

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Mantiq">
+  <defs>
+  <linearGradient id="mantiq-gold" x1="10" y1="10" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#E3D2A8" />
+    <stop offset="0.52" stop-color="#BDA77E" />
+    <stop offset="1" stop-color="#8F7A52" />
+  </linearGradient>
+  </defs>
+  <path d="M14 49V18.5l18 20.5 18-20.5V49" fill="none" stroke="url(#mantiq-gold)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="14" cy="18.5" r="6" fill="url(#mantiq-gold)" />
+  <circle cx="32" cy="39" r="5.8" fill="url(#mantiq-gold)" />
+  <circle cx="50" cy="18.5" r="6" fill="url(#mantiq-gold)" />
+  <circle cx="14" cy="49" r="4.8" fill="url(#mantiq-gold)" />
+  <circle cx="50" cy="49" r="4.8" fill="url(#mantiq-gold)" />
+</svg>

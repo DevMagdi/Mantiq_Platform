@@ -107,7 +107,7 @@ export function ImportLeadsDialog({ onClose }: { onClose: () => void }) {
       ) : (
         <div className="space-y-4" data-testid="import-preview">
           <p className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
-            <FileSpreadsheet size={15} strokeWidth={1.8} className="text-[var(--primary-ink)]" />
+            <FileSpreadsheet size={15} strokeWidth={1.8} className="text-[var(--color-accent-ink)]" />
             <span dir="ltr">{job.filename ?? filename}</span>
           </p>
 
@@ -117,8 +117,8 @@ export function ImportLeadsDialog({ onClose }: { onClose: () => void }) {
                 key={chip.key}
                 className="rounded-btn px-2.5 py-1.5 text-[12px] font-semibold"
                 style={{
-                  background: chip.tone === "bad" ? "var(--r-bg)" : chip.tone === "good" ? "var(--g-bg)" : "var(--kanban-col)",
-                  color: chip.tone === "bad" ? "var(--r-ink)" : chip.tone === "good" ? "var(--g-ink)" : "var(--ink)",
+                  background: chip.tone === "bad" ? "var(--r-bg)" : chip.tone === "good" ? "var(--g-bg)" : "var(--color-track)",
+                  color: chip.tone === "bad" ? "var(--r-ink)" : chip.tone === "good" ? "var(--g-ink)" : "var(--color-ink)",
                 }}
               >
                 {chip.label}: <span className="tabular-nums">{chip.value}</span>

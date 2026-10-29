@@ -304,7 +304,7 @@ def main() -> int:
         print(f"     {json.dumps(payload if args.keys else _shape(payload), ensure_ascii=False, default=str)[:600]}")
         return payload
 
-    login = client.post("/api/v1/auth/login", json={"email": "manager@brokerhub.test", "password": "Br0kerHub!2026"})
+    login = client.post("/api/v1/auth/login", json={"email": "manager@mantiq.test", "password": "Mantiq!2026"})
     if login.status_code != 200:
         print(f"login failed: {login.status_code} {login.text[:200]}")
         return 1
@@ -358,7 +358,7 @@ def main() -> int:
         get(f"/api/v1/requests/{request_id}/calls", token)
         get(f"/api/v1/requests/{request_id}/notes", token)
 
-    portal_login = client.post("/api/v1/auth/login", json={"email": "owner.mantiq@company.test", "password": "Br0kerHub!2026"})
+    portal_login = client.post("/api/v1/auth/login", json={"email": "owner.mantiq@company.test", "password": "Mantiq!2026"})
     if portal_login.status_code == 200:
         portal_token = portal_login.json()["access_token"]
         get("/api/v1/portal/overview", portal_token)
@@ -373,7 +373,7 @@ def main() -> int:
         else:
             failures.append(f"{path} should be flag-gated, got {gated.status_code}")
 
-    admin_token = client.post("/api/v1/auth/login", json={"email": "admin@brokerhub.test", "password": "Br0kerHub!2026"}).json()[
+    admin_token = client.post("/api/v1/auth/login", json={"email": "admin@mantiq.test", "password": "Mantiq!2026"}).json()[
         "access_token"
     ]
     admin = {"authorization": f"Bearer {admin_token}"}
@@ -428,7 +428,7 @@ def main() -> int:
                     failures.append(f"signed media fetch -> {media.status_code}")
                 # a rep without calls.listen must not be able to listen (spec §6.4)
                 rep_token = client.post(
-                    "/api/v1/auth/login", json={"email": "sara.elsayed@brokerhub.test", "password": "Br0kerHub!2026"}
+                    "/api/v1/auth/login", json={"email": "sara.elsayed@mantiq.test", "password": "Mantiq!2026"}
                 ).json()["access_token"]
                 denied = client.get(f"/api/v1/calls/{recording['id']}/recording-url", headers={"authorization": f"Bearer {rep_token}"})
                 if denied.status_code == 403:
@@ -634,7 +634,7 @@ def main() -> int:
                 failures.append(f"create portal account -> {made.status_code} {made.text[:160]}")
 
             # a rep-facing check that the new lead filters narrow instead of widening (§6)
-            rep_token_smoke = client.post("/api/v1/auth/login", json={"email": "sara.elsayed@brokerhub.test", "password": "Br0kerHub!2026"})
+            rep_token_smoke = client.post("/api/v1/auth/login", json={"email": "sara.elsayed@mantiq.test", "password": "Mantiq!2026"})
             if rep_token_smoke.status_code == 200:
                 rep_headers = {"authorization": f"Bearer {rep_token_smoke.json()['access_token']}"}
                 filtered = client.get("/api/v1/leads/board?unassigned=true", headers=rep_headers)

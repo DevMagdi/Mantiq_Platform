@@ -53,7 +53,7 @@ export default function SetupPage() {
                 ) : null}
               </div>
             </div>
-            <Link to={step.to} className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-primary">
+            <Link to={step.to} className="inline-flex shrink-0 items-center gap-1 text-[13px] font-bold text-accent-ink">
               {t("setup.open")} <ArrowLeft size={14} />
             </Link>
           </Card>
@@ -64,7 +64,7 @@ export default function SetupPage() {
         <SectionTitle>{t("setup.privacyTitle")}</SectionTitle>
         {integrations.isPending ? <StateBlock kind="loading" /> : null}
         <p className="mb-2 flex items-start gap-2 text-[13px] leading-6 text-ink">
-          <CheckCircle2 size={15} className="mt-1 shrink-0 text-primary" /> {t("setup.privacyBody")}
+          <CheckCircle2 size={15} className="mt-1 shrink-0 text-accent-ink" /> {t("setup.privacyBody")}
         </p>
         <p className="mb-2 text-[13px] leading-6 text-ink">{t("setup.consentBody")}</p>
         <p className="text-[12.5px] text-muted">{t("setup.consentNote")}</p>

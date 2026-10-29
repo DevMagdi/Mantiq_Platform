@@ -1,4 +1,7 @@
-# Runbook — Broker Hub
+# Runbook — Mantiq (منطق)
+
+> المنتج اسمه **منطق / Mantiq** (شركة **Mantiq Technologies**) بعد جولة R13 — انظر ADR-034.
+> مسارات الحزم وخدمات Docker وأسماء قاعدة البيانات بقيت كما هي عن قصد، والتوثيق يشير إليها بأسماءها.
 
 موجه لمن يشغّل النظام: تشغيل، مراقبة، حوادث، وصلاحيات. كل أمر هنا نصفيًا قابل للنسخ.
 
@@ -83,11 +86,11 @@ select u.email, r.code, string_agg(p.code, ', ' order by p.code)
 from users u join roles r on r.id = u.role_id
 left join role_permissions rp on rp.role_id = r.id
 left join permissions p on p.id = rp.permission_id
-where u.email = 'sara.elsayed@brokerhub.test' group by 1,2;
+where u.email = 'sara.elsayed@mantiq.test' group by 1,2;
 
 -- هل له user_scopes تضيّق النطاق (مدير حساب/خدمة عملاء)؟
 select s.scope_type, s.scope_id, c.name from user_scopes s left join clients c on c.id = s.scope_id
-where s.user_id = (select id from users where email = 'cs@brokerhub.test');
+where s.user_id = (select id from users where email = 'cs@mantiq.test');
 ```
 
 - المندوب: `owner` scope (leads به `assigned_to`، عملاء بـ `account_owner_id`)؛ id خارج النطاق ⇒ **404**.
@@ -306,7 +309,7 @@ SIG=\"sha256=$(printf '%s' \"$BODY\" | openssl dgst -sha256 -hmac \"$SECRET\" -h
 
 ```bash
 TOKEN=$(curl -sS -X POST http://127.0.0.1:8000/api/v1/auth/login -H 'content-type: application/json' \
-  -d '{"email":"manager@brokerhub.test","password":"Br0kerHub!2026"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
+  -d '{"email":"manager@mantiq.test","password":"Mantiq!2026"}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["access_token"])')
 curl -sS -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8000/api/v1/settings/integrations/whatsapp/preflight | python3 -m json.tool
 # ready=false ⇒ لا تضغط المفتاح بعد؛ اقرأ blockers[].label وهي أسماء الحقول المطلوبة بالعربية
 ```

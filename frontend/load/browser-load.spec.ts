@@ -26,7 +26,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from "@pla
 const BASE = process.env.LOAD_WEB_URL ?? "http://127.0.0.1:5173";
 const MINUTES = Number(process.env.LOAD_MINUTES ?? "10");
 const OUT = process.env.LOAD_OUT ?? "/tmp/r8-browser-load.json";
-const PASSWORD = process.env.LOAD_PASSWORD ?? "Br0kerHub!2026";
+const PASSWORD = process.env.LOAD_PASSWORD ?? "Mantiq!2026";
 const REPS = Number(process.env.LOAD_REP_COUNT ?? "10");
 
 type Role = "manager" | "rep" | "cs" | "portal";
@@ -51,10 +51,10 @@ type UserResult = {
 };
 
 function emailFor(role: Role, index: number): string {
-  if (role === "manager") return "manager@brokerhub.test";
-  if (role === "cs") return "cs@brokerhub.test";
+  if (role === "manager") return "manager@mantiq.test";
+  if (role === "cs") return "cs@mantiq.test";
   if (role === "portal") return "owner.mantiq@company.test";
-  return `load.rep${String(index % REPS).padStart(2, "0")}@brokerhub.test`;
+  return `load.rep${String(index % REPS).padStart(2, "0")}@mantiq.test`;
 }
 
 async function signIn(page: Page, email: string): Promise<void> {

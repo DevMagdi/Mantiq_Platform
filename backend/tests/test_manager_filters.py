@@ -15,8 +15,8 @@ import pytest
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
 
 pytestmark = pytest.mark.integration
 

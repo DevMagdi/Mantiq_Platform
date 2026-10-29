@@ -1,4 +1,67 @@
-# STATUS — منصة إدارة الوساطة التأمينية (Broker Hub)
+# STATUS — Mantiq · منطق (منصة إدارة الوساطة التأمينية)
+
+> **الاسم التجاري للمنتج: منطق / Mantiq — شركة Mantiq Technologies** (جولة R13، ADR-034).
+> ما بقي بالاسم القديم في هذا الملف هو سجل تاريخي للجولات السابقة، لا نسخًا معروضًا للمستخدم.
+
+## جولة R13 — هوية Mantiq البصرية (Brand System، ADR-034)
+
+**ما تغيّر**
+
+| المحور | ما نُفِّذ | الدليل |
+| --- | --- | --- |
+| التوكنات | `frontend/src/styles/tokens.css` صار المصدر الوحيد: لوحة Mantiq (Navy `#16273B`، Deep `#0E1728`، Network `#243553`، Gold `#BDA77E`، Gold Light `#E3D2A8`، Gold Dark `#8F7A52`، On-dark `#E8E2D4`) + كل التوكنات الدلالية المطلوبة (`--color-bg/surface/ink/muted/border/sidebar*/accent*/on-accent` و`--gradient-mark`). الأسماء القديمة (`--primary`…) صارت **alias** لنفس المتغيّر، بلا أي hex ثانٍ. `tailwind.config.js` خريطة أسماء فقط، صفر hex. | `frontend/tests/tokens.test.ts` (13 تأكيدًا) — يفشل إذا تكرّر أي hex أو ظهر أي لون من الهوية القديمة داخل `src/` أو خرج hex خام خارج ملف التوكنات |
+| المسح العام | 72 موضعًا استُبدل: أزرار/روابط/تبويبات/تبديل/تنقّل نشط/رسوم. زر أساسي = ذهبي ونصّه **Deep Navy** (`--color-on-accent`)، حلقة التركيز Gold Dark (4.1:1)، روابط ونصوص ذهبية على الأبيض عبر `--color-accent-ink` (6.1:1). | `src/styles/index.css` (`.btn-primary`, `.link-accent`, `:focus-visible`) + `e2e/brand.spec.ts` |
+| الشريط الجانبي | Deep Navy، عنصر نشط = تعبئة ذهبية ناعمة (14%) + لون ذهبي + شريط 3px على **inline-start** (يمين في RTL، يسار في LTR) + هوفر Network Blue. ترويسة الشريط = الماركة + الاسم + «Mantiq Technologies». | `e2e/brand.spec.ts` يقيس اللون المحسوب، موضع الشريط، ووجود عنصر نشط واحد |
+| الشعار والأيقونات | علامة «M» شبكية بتدرّج ذهبي 135°؛ مولّد واحد `frontend/scripts/generate-brand-icons.py` (Pillow، بلا شبكة) أنتج `favicon.ico` (16/32/48) و`favicon-32` و`apple-touch-180` و`icon-192/512/512-maskable` و`og-image 1200×630` و`brand/mantiq-mark(.svg/-on-navy.svg)` ونسخة PNG لبيان PDF. نفس الإحداثيات في `BrandMark.tsx` والـSVG والمولّد، ويحرسها اختبار. | `frontend/tests/favicon.test.ts` (5) + `tokens.test.ts` («one geometry») |
+| التبويب وPWA | `<title>منطق · منصة إدارة الوساطة التأمينية` و`applyDirection()` يعيد كتابة العنوان حسب اللغة، `theme-color #0E1728`، `background_color #FAFBFC`، البيان `Mantiq · منطق`. | `e2e/brand.spec.ts` (العنوان يتحوّل إلى `Mantiq` عبر مفتاح اللغة) |
+| النصوص | `common.appName` = «منطق» / «Mantiq»، `common.legalName`، `common.documentTitle`، `portal.brand` = «منطق · بوابة العميل»، رسالة بيانات دخول البوابة، عنوان الـAPI ووصفه، `SMTP_FROM_NAME`، لوحة المحاكي. **نصوص المجال لم تُلمس.** | `tests/i18n-parity.test.ts` — الاختبار الجديد يمسح كل `t("…")` في `src/` ويُفشل أي مفتاح بلا ترجمة |
+| بيانات العرض | حسابات التجربة تُطبع على شاشة الدخول، فاسم العلامة القديم فيها هو «كروم» لا بنية تحتية: `@brokerhub.test` → `@mantiq.test`، كلمة المرور `Br0kerHub!2026` → `Mantiq!2026` (ما زال `SEED_PASSWORD` يتجاوزها)، المرسل `no-reply@mantiq.local`، وبريد البوابة `@portal.mantiq.local` — في البذرة والواجهة و`e2e/` واختبارات الـbackend وسكربتات الحمل وCI في خطوة واحدة، فلا وسيط يتسجّل ببيانات لم تُنشئها البذرة. وصُحِّح خلط الحروف «سara» → «سارة». | `backend/app/seed.py` · `frontend/e2e/fixtures.ts` · `grep -rn "brokerhub"` = صفر خارج معرّفات البنية التحتية والسجلات المؤرّخة |
+| الرسوم | سلسلة 1 = Mantiq Gold، 2 = Network Blue، 3 = Gold Dark، والخطوط شبكة Navy بشفافية 8%؛ شارات الالتزام صارت أزواج الحالة الدلالية بدل الأخضر/الكهرماني/الأحمر الفاقع. | `DashboardPage.tsx` (`CHANNEL_COLOR`)، `ReportsPage.tsx` (`COMPLIANCE_TONE`) |
+| التصدير والطباعة | XLSX: ترويسة مطبوعة + خصائص الملف = «Mantiq · منطق — Mantiq Technologies»، وشريط ترويسة الجدول ذهبي فاتح بخط Deep Navy. PDF الوثيقة: علامة الماركة على الترويسة، «Mantiq» + «Mantiq Technologies»، قاعدة ذهبية 14pt بدل الأزرق، تذييل باسم الشركة. | `_brand()` في `app/services/exports.py` · `documents.py` (لقطة `/tmp/policy*.pdf` في نص الجولة) |
+| لقطات | `docs/ui-parity/mantiq-brand/` (:login، dashboard، inbox، ERP، portal، + login على 390px) بأمر واحد قابل للتكرار: `CDP_URL=… node scripts/capture-brand-screens.mjs` | كل لقطة تطبع `title` و`body` و`sidebar` المحسوبة وقت التصوير |
+
+**ما لم يتغيّر عن قصد**: مسارات الحزم (`@broker-hub/frontend`)، اسم قاعدة البيانات/المستخدم (`brokerhub`) وأدوار `brokerhub_app`/`brokerhub_load`/`brokerhub_deploy`، اسم مخزن S3، أسماء خدمات Docker، مفتاح `bh.lang`، إصدارات JWT/الأسرار/أسماء مفاتيح env (كلها موثقة في ADR-034 §7). لا هجرات قاعدة بيانات، ولا وحدة ERP جديدة، ولا وضع ليلي كامل.
+
+**أوامر التحقق ومخرجاتها الحرفية في هذه الجلسة**
+
+```
+frontend $ npm run build            → ✓ · dist/index.html يحمل favicon.ico/favicon-32/apple-touch/manifest + <title>منطق …</title>، وCSS المبني خالٍ من 4f46e5/4338ca/eef0ff/0e1424/f3f4f9 (grep = صفر)
+frontend $ npm run lint             → eslint . --max-warnings 0 → بلا مخرجات (نظيف)
+frontend $ npm run typecheck        → tsc ×2 → نظيف
+frontend $ npx vitest run           → Test Files 20 passed (20) · Tests 135 passed (135)
+frontend $ E2E_USE_PREVIEW=1 npx playwright test --grep-invert "R6 evidence"
+                                    → 151 passed · 0 failed · 51 skipped (3.4m) — قاعدة بيانات نظيفة، البناء المُجمَّع (هيئة CI نفسها)
+backend  $ pytest -q                → 326 مُجمَّعة · 317 passed · 9 skipped · بلا `lastfailed` (319s)
+backend  $ ruff check .             → All checks passed!
+backend  $ mypy app                 → Success: no issues found in 120 source files
+backend  $ python scripts/check_openapi_fresh.py → openapi.json is fresh (129 paths) بعد إعادة التصدير (العنوان/الوصف تغيّرا فقط)
+```
+
+**عن e2e — بوضوح**: المرجع هو البناء المُجمَّع، لأن CI يشغّل `E2E_USE_PREVIEW=1`: هناك — على قاعدة
+بيانات نظيفة بعد إعادة تسمية بيانات العرض — الحزمة كاملة **151 passed · 0 failed · 51 skipped**،
+ومجموعة `settings+isolation+screens+live-round` **62 passed · 10 skipped · 0 failed**.
+
+أما على خادم التطوير (`vite dev`) فالإخفاقات «عنصر لم يظهر» متبدّلة الموضع بلا أي 4xx/5xx: أربع محاولات
+لـ`settings.spec.ts` وحدها على قاعدة نظيفة أعطت: 15 passed (نظيفة)، ثم 14 passed + إخفاق واحد، ثم
+14 + إخفاق واحد، ثم 13 + إخفاقين — والاختبار المُخفق مختلف كل مرة (`:47` ثم `:154` ثم `:166`)، وأحد
+التشغيلات استغرق 5.5 دقيقة بدل 1.5 — أي تذبذب توقيت تحت حمل هذه البيئة لا عيب في الصفحة.
+`screens` و`isolation` و`live-round` تمرّ كاملة في وضع dev عند تشغيل كل منها وحده على قاعدة نظيفة
+(30 · 13+1skip · 4+4skip).
+
+أُصلح في الطريق عيبان حقيقيان في البنية التحتية للاختبار (لا في التطبيق): `e2e/global-setup.ts` كان
+يُطلق Chromium بلا `E2E_CHROMIUM_PATH` فلا تعمل التسخينة إطلاقًا في بيئة بلا CDN، وكان يسخّن `/login`
+وحده بينما Vite يُجمِّع شريحة كل مسار عند أول زيارة؛ صار يحترم المسار ويوقّع دخول الأدمن ويزور الشاشات
+السبع. و`scripts/capture-brand-screens.mjs` كان ما زال يسجّل الدخول ببيانات ما قبل إعادة التسمية.
+التسخينة أزالت متغيّر «الشريحة الباردة» لكنها لم تُنهِ تذبذب وضع dev على هذه الآلة، ولهذا لا يُبنى
+عليها حكم: الحكم على البناء المُجمَّع.
+
+**لم يُشغَّل — فيديو R6**: `e2e/r6-evidence.spec.ts` يحتاج `ffmpeg-linux` (‎`ffmpeg-1013`‎) وليس في
+هذه البيئة ولا يمكن تنزيله (الخرج المسموح لا يشمل CDN). لذلك لا يوجد أصل فيديو لهذه الجولة؛ اللقطات
+الثابت في `docs/ui-parity/mantiq-brand/` هي الدليل البصري، والمواصفة مستثناة من التشغيل أعلاه بـ
+`--grep-invert "R6 evidence"`.
+
+**قيد بيئي مسجّل**: `npx playwright install chromium` فشل هنا (`ECONNRESET` من `cdn.playwright.dev` — الشبكة المسموحة لا تشمل CDN اللاعب)، فشُغِّلت e2e على Chromium 153 (بناء headless) عبر متغير جديد `E2E_CHROMIUM_PATH` في `playwright.config.ts` وبوابة CDP للسكربت. الأيقونات وُلِّدت بـPillow؛ الملفات الناتجة ملتزمة في Git، فالبناء وCI لا يحتاجان Pillow.
+
 
 ## Product Scorecard Sprint — 2026-10-29 (ADR-033)
 
@@ -500,7 +563,7 @@ PR #5. الفشل المتبقّي له ثلاثة أصول، كلُّها مُ�
 
 | # | البند | الدليل |
 | --- | --- | --- |
-| 1 | دخول `manager@brokerhub.test` | `auth` 200 + `me` بصلاحيات |
+| 1 | دخول `manager@mantiq.test` | `auth` 200 + `me` بصلاحيات |
 | 2 | لوحة التحكم بلا 500 | 4/4 نقاط 200 |
 | 3 | صندوق الوارد: قائمة/تفاصيل/ملاحظة/رد | 200/201 لكل بند |
 | 4 | Kanban + إحصاءات + FSM | 200 + رفض الانتقال غير القانوني 409 |
@@ -727,7 +790,7 @@ session.commit()` قبل الـhash + `tests/test_auth_pool.py` (يفشل على
 - [~] لم تُعدَّل migration مُدمجة **إلا باستثناء موسَّم ومُبرَّر** (0001/0002، ADR-014): كل منهما كان
   مستحيل التشغيل على PostgreSQL فلم تُطبَّق على أي قاعدة. أي تغيير آخر يُضاف كترقية جديدة (0003 فما فوق)
 - [x] لا أسرار في المستودع: `.env` مُستثنى، والموجود أمثلة فقط (`backend/.env.example`, `frontend/.env.example`, `infra/.env.example`)
-- [x] لا بيانات شخصية حقيقية في الـseed (أسماء/أرقام وهمية، نطاق `@brokerhub.test`، `+201…` غير مخصّصة)
+- [x] لا بيانات شخصية حقيقية في الـseed (أسماء/أرقام وهمية، نطاق `@mantiq.test`، `+201…` غير مخصّصة)
 - [~] لقطات الـ16 شاشة + contact sheet: مكتوبة وتُنتَج في CI؛ لم تُشغَّل محليًا — جُرِّب `@sparticuz/chromium`
   وتعذّر التشغيل لغياب `libnss3/libnspr4` بلا root (تفصيل «ما لم يُشغَّل» 1)
 - [x] README فيه تشغيل بأوامر ثلاثة + تشغيل بلا Docker

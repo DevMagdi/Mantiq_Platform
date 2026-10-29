@@ -116,7 +116,7 @@ export default function UsersPage() {
 
         <div className="space-y-5">
           <Card>
-            <SectionTitle action={<ShieldCheck size={17} strokeWidth={1.8} className="text-[var(--primary-ink)]" />}>{t("users.permGroups")}</SectionTitle>
+            <SectionTitle action={<ShieldCheck size={17} strokeWidth={1.8} className="text-[var(--color-accent-ink)]" />}>{t("users.permGroups")}</SectionTitle>
             <label className="label" htmlFor="role-picker">
               {t("users.colRole")}
             </label>
@@ -221,7 +221,7 @@ function NewUserDialog({ roles, onClose, onCreated }: { roles: Role[]; onClose: 
         }
       >
         <p className="text-[13px] leading-[22px] text-muted">{t("users.issuedNote")}</p>
-        <dl className="mt-3 space-y-2 rounded-card border border-line bg-[var(--kanban-col)] px-3 py-2.5 text-[13px]">
+        <dl className="mt-3 space-y-2 rounded-card border border-line bg-[var(--color-track)] px-3 py-2.5 text-[13px]">
           <div className="flex items-center justify-between gap-3">
             <dt className="text-muted">{t("auth.email")}</dt>
             <dd className="font-semibold text-ink" dir="ltr">
@@ -279,7 +279,7 @@ function NewUserDialog({ roles, onClose, onCreated }: { roles: Role[]; onClose: 
           </option>
         ))}
       </select>
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-btn bg-[var(--kanban-col)] px-3 py-2">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-btn bg-[var(--color-track)] px-3 py-2">
         <span className="text-[12.5px] font-semibold text-ink">{t("users.activateNow")}</span>
         <Toggle label={t("users.activateNow")} checked={form.is_active} onChange={(next) => setForm({ ...form, is_active: next })} />
       </div>

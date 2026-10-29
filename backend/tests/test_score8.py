@@ -14,9 +14,9 @@ from sqlalchemy import select
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-ADMIN = "admin@brokerhub.test"
-REP = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+ADMIN = "admin@mantiq.test"
+REP = "rep_a@mantiq.test"
 pytestmark = pytest.mark.integration
 
 
@@ -79,7 +79,7 @@ async def test_period_close_blocks_and_override_is_audited(client, ids) -> None:
     # a user without finance.period_close is refused by the service itself (not just the route)
     async with get_sessionmaker()() as session:
         await finance_svc.close_period(session, (await session.execute(select(User).where(User.email == MANAGER))).scalar_one(), "2020-04")
-        account_manager = (await session.execute(select(User).where(User.email == "cs@brokerhub.test"))).scalar_one()
+        account_manager = (await session.execute(select(User).where(User.email == "cs@mantiq.test"))).scalar_one()
         with pytest.raises(Conflict):
             await finance_svc.post_entry(
                 session,

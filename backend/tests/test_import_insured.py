@@ -9,8 +9,8 @@ from openpyxl import Workbook
 
 from tests.helpers import login
 
-MANAGER = "manager@brokerhub.test"
-REP_A = "rep_a@brokerhub.test"
+MANAGER = "manager@mantiq.test"
+REP_A = "rep_a@mantiq.test"
 
 XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
