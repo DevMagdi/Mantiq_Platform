@@ -332,7 +332,7 @@ async def build(
             row["tone"] = _TONE_LABEL.get(str(row.get("tone")), "—")
     content = _workbook(SHEET_TITLE[kind], columns, rows)
     return ExportResult(
-        filename=f"broker-hub-{kind.value}.xlsx",
+        filename=f"mantiq-{kind.value}.xlsx",
         media_type=XLSX_MEDIA_TYPE,
         content=content,
         rows=len(rows),

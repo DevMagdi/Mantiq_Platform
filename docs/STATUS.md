@@ -3,6 +3,36 @@
 > **الاسم التجاري للمنتج: منطق / Mantiq — شركة Mantiq Technologies** (جولة R13، ADR-034).
 > ما بقي بالاسم القديم في هذا الملف هو سجل تاريخي للجولات السابقة، لا نسخًا معروضًا للمستخدم.
 
+## جولة R14 — جاهزية الإنتاج (2026-10-29)
+
+**المرجع الوحيد: [`docs/PRODUCTION_READINESS.md`](PRODUCTION_READINESS.md)** — فيه جدول الحالة الكامل،
+وما نُفِّذ بدليل، وما بقي مفتوحًا بسببه. ملخّص ما تغيّر في هذه الجولة:
+
+| المحور | ما نُفِّذ |
+| --- | --- |
+| الأسرار | `backend/.env` أُزيل من الشجرة + `.gitignore` يحمي `.env/.env.*/*.pem/*.key`. **يبقى في تاريخ Git**؛ إجراء `git filter-repo` مكتوب للمالك لأن النسخة هنا shallow والدفع مقصور على الفرع |
+| التوثيق | `README.md` في الجذر (عربي/إنجليزي): ما المنصّة، تشغيل محلي، حاوية، إنتاج، روابط |
+| حرّاس الإنتاج | 12 قاعدة إقلاع (DEBUG، COOKIE_SECURE، CORS https بلا wildcard/localhost، SECRETS_ENCRYPTION_KEY عند الإقلاع، PostgreSQL، تخزين غير مؤقّت، Celery غير eager…) تُجمَّع في خطأ واحد. صُلح عيبان حقيقيان: فحص `JWT_SECRET` كان يقرأ `os.environ` (فيمرّ `ENV=production` والقيم من ملف)، وقاعدة السائق كانت ترفض «حذف المتغيّر» الذي تنصح به رسالتها |
+| البذرة | `python -m app.seed` يرفض `ENV=prod` (حسابات بكلمة مرور منشورة) |
+| الأسماء | اسم ملف التصدير `broker-hub-*.xlsx` → `mantiq-*.xlsx` (**كان يظهر للعميل**)، و`@broker-hub/frontend` → `@mantiq/frontend`؛ والباقي (قاعدة/أدوار/Celery/Prometheus/`bh.lang`) مُوثَّق بقرار في §3 من ملف الجاهزية ويحرسه `test_brand_guard.py` |
+| الإنتاج | `infra/docker-compose.prod.yml` + `nginx.prod.conf` + `frontend.prod.Dockerfile` + `.env.prod.example`، ومُدقِّق `infra/validate_prod_stack.py` يعمل في CI |
+| المزامنة | `npm run codegen:check` (OpenAPI ← `schema.d.ts`) — كانت متزامنة، وأصبح لها أمر تحقّق محلي |
+| RLS | مُتحقَّق على **PostgreSQL 16.2** حقيقي: مُفعَّل و`FORCE` على `leads`/`clients`، والمندوب يرى 16 من 63 و**0** لغيره؛ و`tests/test_rls_postgres.py` **8/8** |
+| الحمل | [`docs/perf/r13-load-2026-10-29.md`](perf/r13-load-2026-10-29.md): **22,015 طلبًا · 0 فشل · 0 5xx**؛ عامل واحد ≈52 rps، وعاملان ≈86 rps وp95 310ms |
+
+```
+backend  $ pytest -q                       → 359 مُجمَّعة · 350 نجحت · 9 تخطٍّ (SQLite)
+backend  $ pytest -q  (PostgreSQL 16.2)    → 359 نجحت · 0 فشل · exit 0
+backend  $ ruff check . · mypy app         → All checks passed! · Success (120 files)
+frontend $ codegen:check · lint · typecheck → in sync · نظيف · نظيف · 135 اختبارًا · build ✓
+infra    $ python infra/validate_prod_stack.py → ✓ 7 services, 46 variables, all documented
+```
+
+**لم يُشغَّل:** `docker compose config/up` (لا Docker daemon)، وRedis/S3/SMTP حقيقيون، وTLS فعلي،
+و`ffmpeg` لفيديو R6 — كلها بسبابها في ملف الجاهزية §6 و§11.
+
+---
+
 ## جولة R13 — هوية Mantiq البصرية (Brand System، ADR-034)
 
 **ما تغيّر**

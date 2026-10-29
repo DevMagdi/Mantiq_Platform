@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -16,6 +15,10 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 PRODUCTION_ENVS: frozenset[str] = frozenset({"prod", "production"})
 #: `ENV` values that may construct a simulated driver (R9: simulation never exists in production).
 SIMULATION_ENVS: frozenset[str] = frozenset({"dev", "test"})
+
+#: The JWT value this repository publishes. It is 34 chars long, so a length check alone would let it
+#: through — production compares against it by name.
+DEV_JWT_SECRET: str = "dev-only-insecure-secret-change-me"
 
 #: Development placeholders that must never sign or verify anything in production. A known secret is worse
 #: than a missing one: `hmac.new(b"dev-app-secret", …)` is computable by anybody who has read this repo.
@@ -44,7 +47,7 @@ class Settings(BaseSettings):
     DB_ECHO: bool = False
 
     # --- auth ---
-    JWT_SECRET: str = "dev-only-insecure-secret-change-me"
+    JWT_SECRET: str = DEV_JWT_SECRET
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_TTL_MIN: int = 15
     REFRESH_TOKEN_TTL_DAYS: int = 14
@@ -156,42 +159,131 @@ class Settings(BaseSettings):
             raise ValueError("SMTP_ENCRYPTION must be none | starttls | ssl")
         return v
 
-    @field_validator("JWT_SECRET")
-    @classmethod
-    def _reject_weak_secret(cls, v: str) -> str:
-        if os.environ.get("ENV", "dev") == "prod" and (v == "dev-only-insecure-secret-change-me" or len(v) < 32):
-            raise ValueError("JWT_SECRET must be a strong value (>=32 chars) when ENV=prod")
-        return v
-
     @model_validator(mode="after")
     def _production_rules(self) -> Settings:
-        """R9 — production runs live integrations and nothing else.
+        """What "ENV=prod" means, enforced at settings load.
 
-        Three rules, all enforced at settings load so the failure is a **clear boot error**, not a silent
-        fall-through to a simulator halfway through a webhook:
+        Every rule here is a boot error, not a log line: a process that is about to serve real
+        customers must not start half-configured. The whole set is checked at once and reported as one
+        list, so an operator fixes one file rather than discovering problems one restart at a time.
 
-        1. `ENV=production` is the same mode as `ENV=prod` (it is rewritten to the canonical `prod`).
-        2. `INTEGRATIONS_DRIVER` is forced to `live`; an explicitly configured `sim` in production is
-           refused outright — that is an operator intent we must not quietly override.
-        3. The development placeholder secrets (`dev-app-secret`, …) are blanked, so production cannot
-           pass a preflight — or verify a webhook — with a key that is published in this repository.
+        1. `ENV=production` is the same mode as `prod` (rewritten to the canonical `prod`).
+        2. `INTEGRATIONS_DRIVER`: an *explicitly* configured `sim` is refused (that is operator intent we
+           must not quietly override); absent or `live` is forced to `live`. The old check compared
+           against the `sim` *default*, so the message's own advice — "remove the variable" — still
+           failed to boot.
+        3. `JWT_SECRET` is long, and is not the value published in this repository.
+        4. `DEBUG` is off, `COOKIE_SECURE` is on, and `CORS_ORIGINS` names real origins (no wildcard, no
+           localhost) — a leaked refresh cookie or an any-origin API is a production incident.
+        5. `SECRETS_ENCRYPTION_KEY` is present at boot, not at first use of the settings screen.
+        6. `DATABASE_URL` is PostgreSQL (SQLite has no row-level security and one writer).
+        7. Object storage is durable: `s3`, or a `local` directory that is not a temp dir.
+        8. Celery is not `always_eager`: running tasks inline blocks the request that triggered them.
+        9. Development placeholder webhook secrets (`dev-app-secret`, …) are blanked, so production can
+           never verify a webhook with a key that is published in this repository.
         """
         if self.ENV.strip().lower() == "production":
             self.ENV = "prod"
-        if self.is_production:
-            driver = self.INTEGRATIONS_DRIVER.strip().lower()
-            if driver == "sim":
-                raise ValueError(
-                    "ENV=prod does not allow INTEGRATIONS_DRIVER=sim: production serves the live WhatsApp "
-                    "Cloud API and the live mobile-calls webhook only. Remove the variable or set it to `live`."
+        if not self.is_production:
+            return self
+
+        problems: list[str] = []
+
+        driver = self.INTEGRATIONS_DRIVER.strip().lower()
+        if driver == "sim" and "INTEGRATIONS_DRIVER" in self.model_fields_set:
+            problems.append(
+                "INTEGRATIONS_DRIVER=sim is not allowed with ENV=prod (production serves the live "
+                "WhatsApp Cloud API and the live mobile-calls webhook). Remove it or set it to `live`."
+            )
+        elif driver not in {"sim", "live", ""}:
+            problems.append(f"INTEGRATIONS_DRIVER must be `live` or unset with ENV=prod, got {driver!r}.")
+        self.INTEGRATIONS_DRIVER = "live"
+
+        if len(self.JWT_SECRET) < 32 or self.JWT_SECRET == DEV_JWT_SECRET:
+            problems.append(
+                "JWT_SECRET must be a private value of >= 32 chars (openssl rand -hex 32); the default "
+                "and the values published in this repository are refused."
+            )
+
+        if self.DEBUG:
+            problems.append("DEBUG must be false with ENV=prod (it leaks tracebacks and SQL to clients).")
+
+        if not self.COOKIE_SECURE:
+            problems.append("COOKIE_SECURE must be true with ENV=prod (the refresh cookie must be HTTPS-only).")
+
+        origins = [origin.strip() for origin in self.CORS_ORIGINS if origin.strip()]
+        if not origins:
+            problems.append("CORS_ORIGINS must list the SPA origin(s) with ENV=prod; an empty list is a guess.")
+        else:
+            unsafe = [
+                origin
+                for origin in origins
+                if origin == "*"
+                or "localhost" in origin
+                or "127.0.0.1" in origin
+                or "//[::1]" in origin
+                or origin.startswith("http://")
+            ]
+            if unsafe:
+                problems.append(
+                    "CORS_ORIGINS must be the real https origin(s) with ENV=prod; refused: "
+                    + ", ".join(unsafe)
                 )
-            if driver != "live":
-                raise ValueError(f"INTEGRATIONS_DRIVER must be `live` when ENV=prod, got {self.INTEGRATIONS_DRIVER!r}")
-            self.INTEGRATIONS_DRIVER = "live"
-            for field_name, placeholder in DEV_PLACEHOLDER_SECRETS.items():
-                if getattr(self, field_name) == placeholder:
-                    setattr(self, field_name, "")
+
+        if len(self.SECRETS_ENCRYPTION_KEY.strip()) < 16:
+            problems.append(
+                "SECRETS_ENCRYPTION_KEY is required with ENV=prod (>= 16 chars, or a Fernet key): stored "
+                "integration credentials must not be encrypted with a value derived from JWT_SECRET."
+            )
+
+        if not self.is_postgres:
+            problems.append(
+                "DATABASE_URL must point at PostgreSQL (postgresql+asyncpg://) with ENV=prod: SQLite has no "
+                "row-level security and takes one writer at a time."
+            )
+
+        storage = self.STORAGE_BACKEND.strip().lower()
+        if storage == "s3":
+            missing = [
+                name
+                for name, value in (
+                    ("S3_BUCKET", self.S3_BUCKET),
+                    ("S3_ACCESS_KEY", self.S3_ACCESS_KEY),
+                    ("S3_SECRET_KEY", self.S3_SECRET_KEY),
+                )
+                if not value.strip()
+            ]
+            if missing:
+                problems.append("STORAGE_BACKEND=s3 needs " + ", ".join(missing) + " with ENV=prod.")
+        elif storage == "local":
+            directory = str(self.STORAGE_DIR)
+            if not directory.startswith("/"):
+                problems.append("STORAGE_DIR must be an absolute path when STORAGE_BACKEND=local.")
+            elif directory.startswith(("/tmp", "/var/tmp", "/dev/shm")):
+                problems.append(
+                    f"STORAGE_DIR={directory} is a temporary directory: attachments and recordings would "
+                    "disappear on restart. Point it at a mounted volume or use STORAGE_BACKEND=s3."
+                )
+        else:
+            problems.append(f"STORAGE_BACKEND must be `s3` or `local` with ENV=prod, got {storage!r}.")
+
+        if self.CELERY_TASK_ALWAYS_EAGER:
+            problems.append(
+                "CELERY_TASK_ALWAYS_EAGER must be false with ENV=prod: it runs every task inline in the "
+                "request that queued it (PDF rendering, exports, SLA sweeps) and no worker is used."
+            )
+
+        if problems:
+            raise ValueError(
+                "Refusing to start with ENV=prod — fix these settings first:\n"
+                + "\n".join(f"  - {problem}" for problem in problems)
+            )
+
+        for field_name, placeholder in DEV_PLACEHOLDER_SECRETS.items():
+            if getattr(self, field_name) == placeholder:
+                setattr(self, field_name, "")
         return self
+
 
     @property
     def is_production(self) -> bool:

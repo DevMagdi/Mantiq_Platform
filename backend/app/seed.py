@@ -115,7 +115,28 @@ COMPANIES = [
 ]
 
 
+class ProductionSeedRefused(RuntimeError):
+    """`python -m app.seed` was pointed at a process that serves real customers."""
+
+
+def assert_seed_allowed(env: str | None = None) -> None:
+    """Demo data exists for demos. Production gets real users from `/settings → users`, not this file.
+
+    The accounts here share one published password, so a seed that ran against production would hand a
+    known credential to every seeded seat. The check reads `ENV` the same way `Settings` does, so a
+    missing value is treated as development (which is what running the script locally means).
+    """
+    current = (env if env is not None else os.environ.get("ENV", "dev")).strip().lower()
+    if current in {"prod", "production"}:
+        raise ProductionSeedRefused(
+            "Refusing to seed: ENV=prod. The demo accounts share a published password "
+            "(SEED_PASSWORD, default 'Mantiq!2026') and the people, leads and policies are fictitious. "
+            "Create the first administrator through the API/service layer instead."
+        )
+
+
 async def seed(session: AsyncSession, *, reset: bool = False) -> dict[str, int]:
+    assert_seed_allowed()
     if await session.execute(select(func.count(User.id))) and not reset:
         if (await session.execute(select(func.count(Role.id)))).scalar_one():
             return {"skipped": 1}
@@ -683,6 +704,10 @@ async def seed(session: AsyncSession, *, reset: bool = False) -> dict[str, int]:
 
 
 async def main() -> None:
+    try:
+        assert_seed_allowed()
+    except ProductionSeedRefused as refused:
+        raise SystemExit(f"error: {refused}") from None
     async with get_sessionmaker()() as session:
         print(await seed(session))
 

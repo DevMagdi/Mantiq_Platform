@@ -71,10 +71,21 @@ def _env(**overrides: str) -> Iterator[None]:
 def _production(**extra: str) -> Any:
     """A production environment with real-looking credentials unless the caller removes one."""
     values = {
+        # A production environment is now fully validated at boot (DEBUG / cookies / CORS / TLS shape),
+        # so this fixture is a *complete* one: every unrelated test in this file inherits it unchanged.
         "ENV": "prod",
         "INTEGRATIONS_DRIVER": "live",
         "JWT_SECRET": "r9-production-jwt-secret-that-is-long-enough",
         "SECRETS_ENCRYPTION_KEY": "r9-production-secrets-key-that-is-long-enough",
+        "DEBUG": "false",
+        "COOKIE_SECURE": "true",
+        "CORS_ORIGINS": "https://app.mantiq.test",
+        "DATABASE_URL": "postgresql+asyncpg://broker:broker@postgres:5432/brokerhub",
+        "STORAGE_BACKEND": "s3",
+        "S3_BUCKET": "brokerhub",
+        "S3_ACCESS_KEY": "r9-access-key",
+        "S3_SECRET_KEY": "r9-secret-key",
+        "CELERY_TASK_ALWAYS_EAGER": "false",
         "WHATSAPP_ACCESS_TOKEN": LIVE_TOKEN,
         "WHATSAPP_PHONE_NUMBER_ID": LIVE_PHONE_ID,
         "WHATSAPP_APP_SECRET": LIVE_APP_SECRET,
@@ -94,7 +105,7 @@ def test_production_settings_force_the_live_driver() -> None:
         assert settings.simulation_allowed is False
         # `ENV=production` is the same mode as `prod`, and both force `live`
         assert settings.INTEGRATIONS_DRIVER == "live"
-    with _env(ENV="production", INTEGRATIONS_DRIVER="live", JWT_SECRET="r9-production-jwt-secret-that-is-long-enough"):
+    with _production(ENV="production"):
         settings = get_settings()
         assert settings.ENV == "prod"
         assert settings.is_production is True
@@ -162,10 +173,7 @@ def test_whatsapp_live_needs_the_app_secret_too() -> None:
 
 def test_production_blanks_the_published_dev_placeholders() -> None:
     """`dev-app-secret` is in this repository: a production process must not verify with it."""
-    with _env(
-        ENV="prod",
-        INTEGRATIONS_DRIVER="live",
-        JWT_SECRET="r9-production-jwt-secret-that-is-long-enough",
+    with _production(
         # the development defaults, exactly as they arrive from a checked-in `.env`
         WHATSAPP_APP_SECRET="dev-app-secret",
         WHATSAPP_VERIFY_TOKEN="dev-verify-token",
