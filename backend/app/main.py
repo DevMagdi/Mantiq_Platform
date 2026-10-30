@@ -62,7 +62,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # R9 §1.A/§2.1: production has no simulator to fall back on, so a missing live credential is a boot
     # failure with the missing keys named — not a process that answers 200 while messages go nowhere.
     registry.assert_production_ready()
+    # R15 P1-C: two workers is the default now, and an in-process hub would only reach half the tabs.
+    # The bus is optional on purpose — without Postgres (dev/tests) the feed keeps today's single-process
+    # semantics instead of refusing to start.
+    from app.core.db import get_engine, get_sessionmaker
+    from app.services import realtime
+    from app.services.realtime_bus import PostgresBus
+
+    bus = PostgresBus(engine=get_engine(), sessionmaker=get_sessionmaker(), hub=realtime.hub)
+    started = await bus.start()
+    app.state.realtime_bus = bus if started else None
     yield
+    await bus.stop()
     log.info("shutdown")
 
 

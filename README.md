@@ -53,6 +53,20 @@ printed on the sign-in screen and can be overridden with `SEED_PASSWORD` before 
 **SQLite caveat:** row-level security, the migration chain and the concurrency tests only run for real
 against PostgreSQL. Use the compose stack below if you are touching permissions, RLS or isolation.
 
+**Two workers, like production (R15):** the deployed API runs `--workers 2`, and one behaviour only exists
+when it does — the change feed crosses processes over PostgreSQL `LISTEN/NOTIFY`, so a tab attached to worker A
+still hears a change handled by worker B. Reproduce that locally:
+
+```bash
+cd backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2
+python scripts/load/r15_fanout_probe.py --base http://127.0.0.1:8000 --attempts 12   # expects 12/12
+```
+
+On PostgreSQL the feed logs `realtime.fanout_ready mode=shared` per worker. If your database cannot hold a
+`LISTEN` session open (PgBouncer in *transaction* pooling mode), set `REALTIME_FANOUT=off`: the feed becomes
+process-local, and every tab repairs itself through the revision probe (`?since=`) instead.
+
 ## Run it locally (Docker)
 
 ```bash

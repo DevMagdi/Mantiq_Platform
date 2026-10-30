@@ -67,29 +67,44 @@ interface TodayBoard {
   installments_due: { count: number; items: { id: string; policy_no: string | null; due_date: string; amount: number }[] };
 }
 
+/** The one payload the screen paints from (R15 P0-B) — same five sections the five endpoints return. */
+interface HomePayload {
+  summary: Summary;
+  channels: ChannelRow[];
+  status_breakdown: StatusRow[];
+  today: TodayBoard;
+  recent: RecentRow[];
+  channels_days: number;
+}
+
 export default function DashboardPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [dialog, setDialog] = useState(false);
 
-  const summary = useQuery({ queryKey: ["dashboard", "summary"], queryFn: () => api.get<Summary>("/dashboard/summary") });
-  const channels = useQuery({
-    queryKey: ["dashboard", "channels"],
-    queryFn: () => api.get<ChannelRow[]>("/dashboard/channels", { days: 7 }),
-  });
-  const status = useQuery({
-    queryKey: ["dashboard", "status-breakdown"],
-    queryFn: () => api.get<StatusRow[]>("/dashboard/status-breakdown"),
-  });
-  const today = useQuery({ queryKey: ["dashboard", "today"], queryFn: () => api.get<TodayBoard>("/dashboard/today") });
-  const recent = useQuery({
-    queryKey: ["dashboard", "recent"],
-    queryFn: () => api.get<RecentRow[]>("/dashboard/recent-requests", { limit: 8 }),
+  /*
+   * One request, one loading state, one paint. This screen used to fire five independent GETs whose cards
+   * appeared as each landed; the operator watched the page assemble itself. `/dashboard/home` returns the same
+   * five sections in one response, so `isPending` means "the dashboard is loading", not "which card is late".
+   *
+   * The key keeps the `dashboard` root the invalidation table already names, so a `requests` change still
+   * refetches the KPIs from the realtime feed without a second entry in that table.
+   */
+  const home = useQuery({
+    queryKey: ["dashboard", "home"],
+    queryFn: () => api.get<HomePayload>("/dashboard/home", { days: 7, recent_limit: 8 }),
+    // the five cards are one payload now: waiting 300ms before retrying is cheaper than five staggered retries
+    retry: 1,
   });
 
-  const data = summary.data;
-  /* The summary needs `requests.view`; a role without it gets one clear state, not four empty tiles. */
-  const forbidden = summary.isError && summary.error instanceof ApiError_ && summary.error.code === "forbidden";
+  const data = home.data?.summary;
+  const channels = { data: home.data?.channels };
+  const status = { data: home.data?.status_breakdown };
+  const today = { data: home.data?.today };
+  const recent = { data: home.data?.recent };
+
+  /* The payload needs `requests.view`; a role without it gets one clear state, not four empty tiles. */
+  const forbidden = home.isError && home.error instanceof ApiError_ && home.error.code === "forbidden";
   const yesterday = data?.requests_yesterday ?? 0;
   const todayDelta = data && yesterday > 0 ? Math.round(((data.requests_today - yesterday) / yesterday) * 100) : null;
   const speedDelta = data?.avg_first_response_delta_minutes ?? null;
@@ -247,10 +262,10 @@ export default function DashboardPage() {
           >
             {t("dashboard.byChannel")}
           </SectionTitle>
-          {channels.isPending ? (
+          {home.isPending ? (
             <StateBlock kind="loading" />
-          ) : channels.isError ? (
-            <StateBlock kind="error" action={<Button onClick={() => void channels.refetch()}>{t("common.retry")}</Button>} />
+          ) : home.isError ? (
+            <StateBlock kind="error" action={<Button onClick={() => void home.refetch()}>{t("common.retry")}</Button>} />
           ) : (
             <ChannelBars rows={channels.data ?? []} peak={peak} />
           )}
@@ -258,7 +273,7 @@ export default function DashboardPage() {
 
         <Card>
           <SectionTitle>{t("dashboard.statusCard")}</SectionTitle>
-          {status.isPending ? (
+          {home.isPending ? (
             <StateBlock kind="loading" />
           ) : (
             <ul className="space-y-3">
@@ -299,7 +314,7 @@ export default function DashboardPage() {
         </div>
         <div className="px-[20px] pb-[18px]">
           <DataTable
-            loading={recent.isPending}
+            loading={home.isPending}
             rows={recent.data ?? []}
             keyOf={(row) => row.id}
             onRowClick={(row) => navigate(`/inbox/${row.id}`)}

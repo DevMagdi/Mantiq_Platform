@@ -220,3 +220,108 @@ describe("RealtimeClient", () => {
     expect(queryKeysFor("nonsense")).toEqual([]);
   });
 });
+
+/**
+ * R15 P0 — the invalidation policy. The failure this pins is not a wrong number on a screen; it is a tab that
+ * comes back from the background and fires a request for every list in the app, most of them for screens the
+ * operator is not even looking at.
+ */
+describe("R15 · narrow invalidation", () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+  });
+  afterEach(() => {
+    vi.useFakeTimers();
+  });
+
+  it("a gap invalidates the topic roots, active queries only — never the whole cache", async () => {
+    const { QueryClient } = await import("@tanstack/react-query");
+    const { invalidateForResync } = await import("@/lib/realtimeProvider");
+
+    const queryClient = new QueryClient();
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+    invalidateForResync(queryClient);
+
+    expect(spy).toHaveBeenCalled();
+    for (const call of spy.mock.calls) {
+      const filters = call[0] as { queryKey?: unknown[]; refetchType?: string } | undefined;
+      // a bare `invalidateQueries()` — the bug — has no filters at all
+      expect(filters).toBeDefined();
+      expect(Array.isArray(filters?.queryKey)).toBe(true);
+      expect(filters?.refetchType).toBe("active");
+    }
+    // roots, not a wildcard: every key we pass is one a topic can actually touch
+    const { ALL_TOPIC_ROOTS } = await import("@/lib/realtime");
+    const keys = spy.mock.calls.map((call) => (call[0] as { queryKey: unknown[] }).queryKey[0]);
+    expect(new Set(keys)).toEqual(new Set(ALL_TOPIC_ROOTS));
+  });
+
+  it("an inactive query is not refetched by a gap; an active one is", async () => {
+    const { QueryClient, QueryObserver } = await import("@tanstack/react-query");
+    const { invalidateForResync } = await import("@/lib/realtimeProvider");
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 0 } } });
+    const activeFn = vi.fn().mockResolvedValue(["row"]);
+    const inactiveFn = vi.fn().mockResolvedValue(["row"]);
+
+    // "on screen": an observer with a subscriber is what react-query counts as active
+    const observer = new QueryObserver(queryClient, { queryKey: ["requests", "queue"], queryFn: activeFn });
+    const unsubscribe = observer.subscribe(() => {});
+    // "another screen, not mounted": prefetch populates the cache without an observer
+    await queryClient.prefetchQuery({ queryKey: ["leads", "board"], queryFn: inactiveFn });
+
+    await vi.waitFor(() => expect(activeFn).toHaveBeenCalled());
+    const activeBefore = activeFn.mock.calls.length;
+    const inactiveBefore = inactiveFn.mock.calls.length;
+
+    invalidateForResync(queryClient);
+    await vi.waitFor(() => expect(activeFn.mock.calls.length).toBeGreaterThan(activeBefore));
+    // give the inactive refetch every chance to happen: it must not
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(inactiveFn.mock.calls.length).toBe(inactiveBefore);
+    // …and the key is still *marked* stale, so opening that screen later refetches it (correctness kept)
+    expect(queryClient.getQueryState(["leads", "board"])?.isInvalidated).toBe(true);
+
+    unsubscribe();
+  });
+
+  it("a returning tab asks the server before invalidating anything", async () => {
+    const { RealtimeClient } = await import("@/lib/realtime");
+    const onResync = vi.fn();
+    // the stream is a live, silent body; `/realtime/revision` answers from `serverRevision`
+    let serverRevision = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        // a real `hello` frame: that is what moves the client to "live" (a comment frame is only a heartbeat)
+        controller.enqueue(new TextEncoder().encode('event: hello\ndata: {"revision":0}\n\n'));
+      },
+    });
+    const fetchImpl = vi.fn(async (input: string) => {
+      if (String(input).includes("/realtime/stream")) return { ok: true, status: 200, body: stream } as unknown as Response;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ revision: serverRevision, topics: serverRevision ? { requests: serverRevision } : {} }),
+      } as unknown as Response;
+    });
+    const client = new RealtimeClient({ fetchImpl, onEvent: vi.fn(), onResync });
+    client.start();
+    await vi.waitFor(() => expect(client.currentStatus).toBe("live"));
+
+    // nothing moved on the server: the tab must not invalidate anything
+    const before = onResync.mock.calls.length;
+    expect(await client.checkStale()).toBe(false);
+    expect(onResync.mock.calls.length).toBe(before);
+
+    // now the server has moved: exactly one resync, carrying the server's revision
+    serverRevision = 42;
+    expect(await client.checkStale()).toBe(true);
+    expect(onResync).toHaveBeenCalledTimes(before + 1);
+    expect(onResync).toHaveBeenLastCalledWith(42);
+    // …and asking again with nothing new is a no-op (no storm on every focus)
+    const afterMove = onResync.mock.calls.length;
+    expect(await client.checkStale()).toBe(false);
+    expect(onResync.mock.calls.length).toBe(afterMove);
+    client.stop();
+  });
+});

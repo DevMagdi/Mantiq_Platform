@@ -149,7 +149,10 @@ class LeadActivityOut(Open):
 
 class LeadBoardColumnOut(Open):
     status: str
+    #: cards in *this response* — the page a lane can render without freezing the board (R15 P1-B)
     count: int
+    #: cards in this stage for this caller. `count < total` is how the lane says "showing the newest 60 of 214"
+    total: int = 0
     items: list[LeadOut] = Field(default_factory=list)
 
 
@@ -335,11 +338,22 @@ class CallOut(Open):
 
 
 class RequestDetailOut(RequestOut):
+    """One request and the **newest window** of its thread (R15 P1-A).
+
+    The lists are pages, not the whole history: `*_total` says how much exists behind them. A client learns
+    that "older messages" still exist by comparing the two, instead of guessing from the page size — the
+    unbounded version is what made a long negotiation thread slow to open and slow to scroll.
+    """
+
     description: str | None = None
     messages: list[RequestMessageOut] = Field(default_factory=list)
+    messages_total: int = 0
     notes: list[RequestNoteOut] = Field(default_factory=list)
+    notes_total: int = 0
     calls: list[CallOut] = Field(default_factory=list)
+    calls_total: int = 0
     attachments: list[AttachmentOut] = Field(default_factory=list)
+    attachments_total: int = 0
 
 
 class RecordingUrlOut(Open):
@@ -373,6 +387,25 @@ class DashboardStatusOut(Open):
     key: str
     count: int
     pct: int
+
+
+class DashboardHomeOut(Open):
+    """The whole first paint of screen 1, in one response (R15 P0-B).
+
+    Five GETs used to leave the browser in parallel — summary, channels, status breakdown, today, recent — and
+    each one paid its own TLS/HTTP/auth/session cost before the first card could render. They are the same
+    reads, composed on one session, returned together: the KPIs, the chart, the donut, the «اليوم» board and
+    the recent list now arrive as one object, so the screen has one loading state instead of five staggered
+    ones. Each section keeps its own shape, so no consumer has to learn a new one.
+    """
+
+    summary: DashboardSummaryOut
+    channels: list[DashboardChannelOut] = Field(default_factory=list)
+    status_breakdown: list[DashboardStatusOut] = Field(default_factory=list)
+    today: dict[str, Any] = Field(default_factory=dict)
+    recent: list[RequestOut] = Field(default_factory=list)
+    #: the window the chart covers, echoed so a client that asked for 30 days cannot render a 7-day legend
+    channels_days: int = 7
 
 
 class ClientKpiRowOut(Open):

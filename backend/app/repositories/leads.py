@@ -100,6 +100,12 @@ async def unassigned_ids(session: AsyncSession, scope: Scope, *, limit: int = 2_
     return list((await session.execute(stmt)).scalars())
 
 
+#: default cards per column. A stage with thousands of leads is a *reporting* question ("how many, how old"),
+#: not something to mount in the DOM; the cap is per column so no lane can starve the others, which the old
+#: single `LIMIT 500` did — the first four columns could consume the budget and the last one come back empty.
+BOARD_PER_COLUMN = 60
+
+
 async def board(
     session: AsyncSession,
     scope: Scope,
@@ -107,12 +113,17 @@ async def board(
     assigned_to: UUID | None = None,
     q: str | None = None,
     unassigned: bool = False,
-) -> dict[str, list[Lead]]:
-    """Kanban payload (screen 3): 5 columns in one query, same predicate as the list.
+    per_column: int = BOARD_PER_COLUMN,
+) -> tuple[dict[str, list[Lead]], dict[str, int]]:
+    """Kanban payload (screen 3): the newest `per_column` cards of every stage, plus each stage's true count.
 
-    `assigned_to` is what a manager uses to answer "where does Mohamed stand?" — the same board shape,
-    one rep's cards. It narrows; it can never widen, because `with_scope` is applied after it (a rep who
-    passes a colleague's id gets an empty board, not that colleague's book).
+    Two queries, not eleven: one window-function query ranks cards inside their stage and keeps the first
+    `per_column` (`row_number() over (partition by status …)`), one grouped count answers "how many are
+    behind the window". The old shape was a single `LIMIT 500` over all five stages with four eager-loads
+    per row — 500-card payloads, a DOM that took seconds to mount, and a lane that could silently starve.
+
+    `assigned_to` is what a manager uses to answer "where does Mohamed stand?" — the same board shape, one
+    rep's cards. It narrows; it can never widen, because `with_scope` is applied after it.
     """
     conds: list[Any] = [Lead.status.in_(LeadStatus.board_columns())]
     if assigned_to is not None:
@@ -122,12 +133,35 @@ async def board(
     if q:
         like = f"%{q.strip().lower()}%"
         conds.append(func.lower(Lead.name).like(like))
-    stmt = with_scope(_base().where(and_(*conds)), scope, "lead").order_by(Lead.updated_at.desc()).limit(500)
+
+    #: the board shows a card's name, mobile, stage, assignee and dates. `assignee.role` and `lost_reason`
+    #: belong to screens nobody opens from a lane, and each row was paying for them (4 extra queries/page).
+    ranked = with_scope(
+        select(
+            Lead.id.label("lead_id"),
+            func.row_number().over(partition_by=Lead.status, order_by=Lead.updated_at.desc()).label("column_rank"),
+        ).where(and_(*conds)),
+        scope,
+        "lead",
+    ).subquery()
+    # join back to the entity so the ORM still loads the relations `lead_brief` reads (a bare subquery select
+    # hands back raw rows, not leads)
+    stmt = _base().join(ranked, Lead.id == ranked.c.lead_id).where(ranked.c.column_rank <= per_column)
     leads = list((await session.execute(stmt)).scalars().unique())
+
+    count_stmt = with_scope(select(Lead.status, func.count(Lead.id)).where(and_(*conds)).group_by(Lead.status), scope, "lead")
+    totals: dict[str, int] = {}
+    for status, count in (await session.execute(count_stmt)).all():
+        totals[str(status.value if hasattr(status, "value") else status)] = int(count)
+
+    # `row_number` already ordered each partition, but the rows come back interleaved across statuses; the
+    # per-lane sort restores the display order without another round trip.
     grouped: dict[str, list[Lead]] = {c.value: [] for c in LeadStatus.board_columns()}
     for lead in leads:
         grouped[lead.status.value].append(lead)
-    return grouped
+    for items in grouped.values():
+        items.sort(key=lambda lead: lead.updated_at, reverse=True)
+    return grouped, {c.value: totals.get(c.value, 0) for c in LeadStatus.board_columns()}
 
 
 async def stats(session: AsyncSession, scope: Scope, *, rep_id: UUID | None = None) -> dict[str, Any]:

@@ -21,3 +21,8 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 await setupI18n();
+
+// jsdom has no layout, so `scrollIntoView` is missing entirely. The inbox calls it when the newest message
+// changes (R15 P1-A: a thread that only scrolls for *new* messages, never when an older page is prepended),
+// and a missing method must not read as a React error in a test that is not about scrolling.
+Element.prototype.scrollIntoView = vi.fn();

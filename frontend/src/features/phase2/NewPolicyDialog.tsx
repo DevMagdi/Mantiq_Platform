@@ -19,11 +19,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ClientPicker } from "@/components/ClientPicker";
+
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
 import { Button } from "@/components/ui";
 import { ApiError_, api } from "@/lib/api/client";
-import type { AnyPage } from "@/lib/api/views";
 
 type CreatePolicy = {
   id: string;
@@ -32,7 +33,6 @@ type CreatePolicy = {
   installments: unknown[];
 };
 
-type ClientRow = { id: string; name: string };
 type Ref = { id: string; name: string };
 
 /** The API's field name → the Arabic label the person sees next to the input. */
@@ -81,11 +81,6 @@ export function NewPolicyDialog({ clientId, onClose }: { clientId?: string; onCl
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
 
-  const clients = useQuery({
-    queryKey: ["clients", "picker"],
-    queryFn: () => api.get<AnyPage>("/clients", { page_size: 200 }),
-    enabled: !clientId,
-  });
   const insurers = useQuery({ queryKey: ["insurers"], queryFn: () => api.get<Ref[]>("/insurers") });
   const types = useQuery({ queryKey: ["insurance-types"], queryFn: () => api.get<Ref[]>("/insurance-types") });
 
@@ -138,14 +133,8 @@ export function NewPolicyDialog({ clientId, onClose }: { clientId?: string; onCl
           <label className="label mt-3" htmlFor="np-client">
             {t("phase2.form.client")}
           </label>
-          <select id="np-client" className="field" value={client} onChange={(event) => setClient(event.target.value)}>
-            <option value="">{t("phase2.form.pick")}</option>
-            {((clients.data?.items ?? []) as ClientRow[]).map((row) => (
-              <option key={row.id} value={row.id}>
-                {row.name}
-              </option>
-            ))}
-          </select>
+          {/* R15 P2: search, not a 200-row dump; the endpoint stays scope-aware, so a rep cannot browse another book */}
+          <ClientPicker id="np-client" value={client} onChange={(id) => setClient(id)} placeholder={t("phase2.form.pick")} />
           {errors.client_id ? <p className="mt-1 text-[11.5px] text-[var(--r-ink)]">{errors.client_id}</p> : null}
         </>
       )}

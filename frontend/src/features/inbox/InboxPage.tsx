@@ -24,7 +24,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
-import { Avatar, Badge, Card, Segmented, StateBlock } from "@/components/ui";
+import { Avatar, Badge, Button, Card, Segmented, StateBlock } from "@/components/ui";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import { formatDuration, formatNumber, humanDuration, initials, relativeTime } from "@/lib/format";
@@ -105,11 +105,39 @@ export default function InboxPage() {
     enabled: Boolean(selected),
   });
 
-  const threadLength = detail.data?.messages?.length ?? 0;
+  /*
+   * The thread opens on its newest page (the API sends 30, R15 P1-A) and older pages are fetched on demand.
+   * Prepending into local state keeps the query cache untouched: `detail` still means "the request as the
+   * server just described it", and a realtime invalidation cannot throw away 300 messages the user loaded.
+   */
+  const [older, setOlder] = useState<RequestMessage[]>([]);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  useEffect(() => {
+    setOlder([]);
+  }, [selected]);
+  const newestPage = detail.data?.messages ?? [];
+  const threadMessages = [...older, ...newestPage];
+  const messagesTotal = detail.data?.messages_total ?? newestPage.length;
+  const hasOlder = threadMessages.length < messagesTotal;
+  const lastMessageId = newestPage[newestPage.length - 1]?.id;
+
+  const loadOlder = async () => {
+    const oldest = threadMessages[0];
+    if (!selected || !oldest || loadingOlder) return;
+    setLoadingOlder(true);
+    try {
+      const page = await api.get<RequestMessage[]>(`/requests/${selected}/messages`, { before: oldest.created_at, limit: 30 });
+      setOlder((previous) => [...page, ...previous]);
+    } finally {
+      setLoadingOlder(false);
+    }
+  };
 
   useEffect(() => {
+    // Scroll only when the *newest* message changes. Prepending an older page must not throw the reader to
+    // the bottom — that is the whole point of asking for history while reading it.
     threadEndRef.current?.scrollIntoView({ block: "end" });
-  }, [threadLength, selected]);
+  }, [lastMessageId, selected]);
 
   const send = useMutation({
     mutationFn: () => api.post(`/requests/${selected}/messages`, { body: draft.trim() }),
@@ -317,7 +345,17 @@ export default function InboxPage() {
                   </div>
                 </div>
               ) : null}
-              {(detail.data?.messages ?? []).map((message) => (
+              {hasOlder ? (
+                <div className="flex justify-center py-2">
+                  <Button variant="ghost" onClick={() => void loadOlder()} disabled={loadingOlder}>
+                    {loadingOlder ? t("common.loading") : t("inbox.loadOlder")}
+                    <span className="ms-1.5 text-[11.5px] font-normal text-muted">
+                      {t("inbox.olderCount", { n: messagesTotal - threadMessages.length })}
+                    </span>
+                  </Button>
+                </div>
+              ) : null}
+              {threadMessages.map((message) => (
                 <Bubble key={message.id} message={message} />
               ))}
               {(detail.data?.notes ?? []).map((note) => (

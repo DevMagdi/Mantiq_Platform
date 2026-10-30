@@ -139,10 +139,10 @@ describe("new policy dialog", () => {
     // still no client — the one field nothing can guess
     expect(save).toBeDisabled();
 
-    // the client list arrives from the API: wait for the option, not for the select to exist
+    // R15 P2: the picker is a debounced search. Type first, then pick the row that comes back.
     const picker = screen.getByLabelText(ar.phase2.form.client);
-    await waitFor(() => expect(within(picker).getAllByRole("option").length).toBeGreaterThan(1));
-    fireEvent.change(picker, { target: { value: "c-2" } });
+    fireEvent.change(picker, { target: { value: "شركة" } });
+    fireEvent.click(await screen.findByRole("option", { name: "شركة الأمل" }, { timeout: 2000 }));
     expect(save).toBeEnabled();
   });
 
@@ -150,8 +150,8 @@ describe("new policy dialog", () => {
     const onClose = vi.fn();
     harness(<NewPolicyDialog onClose={onClose} />);
     const picker = screen.getByLabelText(ar.phase2.form.client);
-    await waitFor(() => expect(within(picker).getAllByRole("option").length).toBeGreaterThan(1));
-    fireEvent.change(picker, { target: { value: "c-1" } });
+    fireEvent.change(picker, { target: { value: "شركة" } });
+    fireEvent.click(await screen.findByRole("option", { name: "شركة النيل" }, { timeout: 2000 }));
     fireEvent.change(screen.getByLabelText(ar.phase2.form.start), { target: { value: "2026-11-01" } });
     fireEvent.change(screen.getByLabelText(ar.phase2.form.premium), { target: { value: "24000" } });
     fireEvent.change(screen.getByLabelText(ar.phase2.form.plan), { target: { value: "quarterly" } });

@@ -297,6 +297,50 @@ export class RealtimeClient {
     this.pollTimer = setTimeout(() => void this.poll(), this.options.pollIntervalMs ?? DEFAULTS.pollIntervalMs);
   }
 
+  /**
+   * Ask the server whether anything changed since the last revision this tab applied.
+   *
+   * A tab returning from the background used to call `invalidateQueries()` blind — every query in the app
+   * marked stale on the chance that something moved, which is a full-cache blast for the common case of
+   * *nothing* having moved. `/realtime/revision` answers the question in one small GET, and `onResync` is
+   * only fired when the answer is "yes".
+   *
+   * Returns `true` when a resync was needed. Never throws: a failed probe must not take the feed down, and
+   * the stream reconnect (which carries `since=<revision>`) is the second, self-healing path to the same
+   * answer.
+   */
+  async checkStale(): Promise<boolean> {
+    if (this.stopped) return false;
+    let payload: { revision?: number; topics?: Record<string, number> } | null = null;
+    try {
+      const response = await this.fetchImpl(`${this.baseUrl}/realtime/revision`, {
+        headers: { authorization: `Bearer ${tokenOrEmpty()}` },
+        credentials: "include",
+      });
+      if (response.status === 401) {
+        await this.options.refresh?.();
+        return false;
+      }
+      if (!response.ok) return false;
+      payload = (await response.json()) as { revision?: number; topics?: Record<string, number> };
+    } catch {
+      return false; // offline or aborted: the stream's own reconnect decides what happens next
+    }
+    const serverRevision = Number(payload?.revision ?? 0);
+    let moved = serverRevision > this.revision;
+    for (const [topic, revision] of Object.entries(payload?.topics ?? {})) {
+      if (typeof revision !== "number") continue;
+      if ((this.topicRevisions[topic] ?? 0) < revision) moved = true;
+    }
+    if (!moved) return false;
+    this.revision = Math.max(this.revision, serverRevision);
+    for (const [topic, revision] of Object.entries(payload?.topics ?? {})) {
+      if (typeof revision === "number") this.topicRevisions[topic] = Math.max(this.topicRevisions[topic] ?? 0, revision);
+    }
+    this.options.onResync(this.revision);
+    return true;
+  }
+
   // ---- timers ------------------------------------------------------------------------------
   private armWatchdog(controller: AbortController | null): void {
     if (!controller || this.stopped) return;
@@ -352,11 +396,19 @@ export const TOPIC_QUERY_KEYS: Record<string, readonly string[]> = {
   // count it loaded with for as long as the tab stayed open — the queue underneath it was fresh and the
   // number next to it was not, which is the "two screens disagree" failure this table exists to prevent.
   requests: ["requests", "dashboard", "notifications", "portal", "nav"],
-  leads: ["leads", "sales", "sales-team", "dashboard", "team", "users"],
-  clients: ["clients", "dashboard", "portal", "sales-team"],
+  // `sales` is the rep-workload card (`["sales", "team"]`), which counts leads per rep — a lead change really
+  // does move it. `team` was a key no screen ever used (the real ones are `sales-team` / `sales-team/members`)
+  // and `users` is the *staff* list (roles, names, activation): a lead moving does not touch it. Both were
+  // costing a refetch of an unrelated screen for every lead drag, which is what "minimal" means here.
+  leads: ["leads", "sales", "sales-team", "dashboard"],
+  // Nothing under `sales-team` renders client data; the workload card counts leads.
+  clients: ["clients", "dashboard", "portal"],
   policies: ["policies", "portal", "reports"],
   settings: ["settings", "feature-flags", "roles"],
 };
+
+/** Every root any topic can touch — the union a gap has to consider, and nothing else. */
+export const ALL_TOPIC_ROOTS: readonly string[] = [...new Set(Object.values(TOPIC_QUERY_KEYS).flat())].sort();
 
 export function queryKeysFor(topic: string): readonly string[] {
   return TOPIC_QUERY_KEYS[topic] ?? [];

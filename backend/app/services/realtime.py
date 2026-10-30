@@ -119,6 +119,31 @@ class Change:
     actor_id: str | None = None
     path: str | None = None
 
+    #: every field, ids included. Only ever sent *between workers* over the database channel, never to a
+    #: browser: `as_event(as_visible=True)` is what a subscriber gets, and it strips the ids it must not see.
+    def to_wire(self) -> dict[str, Any]:
+        return {
+            "revision": self.revision,
+            "topic": self.topic,
+            "action": self.action,
+            "at": self.at.isoformat(),
+            "entity_id": self.entity_id,
+            "actor_id": self.actor_id,
+            "path": self.path,
+        }
+
+    @classmethod
+    def from_wire(cls, payload: dict[str, Any]) -> Change:
+        return cls(
+            revision=int(payload["revision"]),
+            topic=str(payload["topic"]),
+            action=str(payload["action"]),
+            at=datetime.fromisoformat(payload["at"]),
+            entity_id=payload.get("entity_id"),
+            actor_id=payload.get("actor_id"),
+            path=payload.get("path"),
+        )
+
     def as_event(self, *, with_ids: bool) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "revision": self.revision,
@@ -156,6 +181,9 @@ class RealtimeHub:
         self._subscribers: set[Subscription] = set()
         self._revision = 0
         self._topic_revision: dict[str, int] = {}
+        #: set when a cross-process bus is attached (`services/realtime_bus.py`). None means this process is
+        #: the only publisher, which is exactly what a single-worker deployment and the test suite want.
+        self._bus: Any = None
 
     # ---- subscribe ---------------------------------------------------------------------------
     def subscribe(self, *, topics: frozenset[str], id_visible: frozenset[str]) -> Subscription:
@@ -173,6 +201,18 @@ class RealtimeHub:
             subscription.queue.put_nowait(None)
 
     # ---- publish -----------------------------------------------------------------------------
+    def attach_bus(self, bus: Any) -> None:
+        """Route publishes through a cross-process bus (R15 P1-C). Called once, from the app lifespan."""
+        self._bus = bus
+
+    def detach_bus(self) -> None:
+        self._bus = None
+
+    @property
+    def shared(self) -> bool:
+        """True when revisions come from a counter every worker agrees on."""
+        return self._bus is not None
+
     def publish(
         self,
         *,
@@ -181,10 +221,30 @@ class RealtimeHub:
         entity_id: str | None = None,
         actor_id: str | None = None,
         path: str | None = None,
+    ) -> Change | None:
+        """Record a change and hand it to every interested subscriber. Never raises, never blocks.
+
+        With a bus attached the change is not delivered here: it is queued, stamped with the shared revision by
+        the publisher, and comes back to *this* process through the same channel every other worker listens
+        on. One delivery path means one meaning for `since`, so a tab that reconnects to a different worker
+        replays correctly. Returns None in that mode — the revision is not known yet, and inventing one would
+        be a lie that only shows up under a second worker.
+        """
+        if self._bus is not None and self._bus.submit(topic=topic, action=action, entity_id=entity_id, actor_id=actor_id, path=path):
+            return None
+        return self.publish_local(topic=topic, action=action, entity_id=entity_id, actor_id=actor_id, path=path)
+
+    def publish_local(
+        self,
+        *,
+        topic: str,
+        action: str,
+        entity_id: str | None = None,
+        actor_id: str | None = None,
+        path: str | None = None,
     ) -> Change:
-        """Record a change and hand it to every interested subscriber. Never raises, never blocks."""
+        """The single-process path, also used as the fallback when the bus refuses a message."""
         self._revision += 1
-        self._topic_revision[topic] = self._revision
         change = Change(
             revision=self._revision,
             topic=topic,
@@ -194,11 +254,28 @@ class RealtimeHub:
             actor_id=actor_id,
             path=path,
         )
+        self._apply(change)
+        return change
+
+    def deliver(self, change: Change) -> None:
+        """Store a change that arrived from another worker and fan it out to this process's subscribers.
+
+        Public because the bus calls it. The guard is about duplicates, not about ordering: LISTEN delivers
+        once per worker, but a retried publish or a reconnecting subscriber can hand us a revision we already
+        have, and counting it twice would move `since` past an event nobody received.
+        """
+        if change.revision <= self._revision:
+            return
+        self._apply(change)
+
+    def _apply(self, change: Change) -> None:
+        self._revision = change.revision
+        self._topic_revision[change.topic] = change.revision
         self._buffer.append(change)
         for subscription in list(self._subscribers):
-            if not subscription.wants(topic):
+            if not subscription.wants(change.topic):
                 continue
-            with_ids = topic in subscription.id_visible
+            with_ids = change.topic in subscription.id_visible
             try:
                 subscription.queue.put_nowait(change.as_event(with_ids=with_ids))
             except asyncio.QueueFull:
@@ -206,7 +283,6 @@ class RealtimeHub:
                 # the subscriber means it will be told to refetch — the same outcome as replaying, without
                 # an unbounded server-side buffer.
                 subscription.overflowed = True
-        return change
 
     # ---- read --------------------------------------------------------------------------------
     @property

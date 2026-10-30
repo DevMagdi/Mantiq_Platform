@@ -11,7 +11,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { getAccessToken } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth";
 import { refreshAccessToken } from "@/lib/session";
-import { RealtimeClient, queryKeysFor, setTokenReader, type ChangeEvent, type RealtimeStatus } from "@/lib/realtime";
+import { ALL_TOPIC_ROOTS, RealtimeClient, queryKeysFor, setTokenReader, type ChangeEvent, type RealtimeStatus } from "@/lib/realtime";
 
 interface RealtimeValue {
   status: RealtimeStatus;
@@ -27,6 +27,24 @@ const RealtimeContext = createContext<RealtimeValue>({ status: "offline", connec
 export function invalidateForChange(queryClient: QueryClient, event: ChangeEvent): void {
   for (const root of queryKeysFor(event.topic)) {
     void queryClient.invalidateQueries({ queryKey: [root] });
+  }
+}
+
+/**
+ * The gap answer: a missed revision means "anything could have moved", not "refetch the entire cache".
+ *
+ * Two narrowings, both deliberate:
+ *  - **roots, not a wildcard.** Only the roots some topic can actually touch (the same table the per-topic
+ *    path uses) are considered, so a financial ledger or the audit log is never dragged along by a feed gap.
+ *  - **active only.** `refetchType: "active"` keeps the refetch to what is on screen. Marking a background
+ *    screen stale is harmless and correct (it refetches when the user opens it); firing twenty parallel list
+ *    requests for screens nobody is looking at is what made a tab return from the background feeling frozen.
+ *
+ * Exported so the policy is testable without mounting React (ADR-026).
+ */
+export function invalidateForResync(queryClient: QueryClient): void {
+  for (const root of ALL_TOPIC_ROOTS) {
+    void queryClient.invalidateQueries({ queryKey: [root], refetchType: "active" });
   }
 }
 
@@ -56,8 +74,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       },
       onResync: (applyTo) => {
         setRevision((seen) => Math.max(seen, applyTo));
-        // a gap means "anything could have moved": refetch what is on screen rather than guessing
-        void queryClient.invalidateQueries();
+        // a gap means "anything could have moved": refetch what is on screen rather than guessing.
+        // (This used to be a bare `invalidateQueries()` — every query in the app, active or not.)
+        invalidateForResync(queryClient);
       },
       onStatus: setStatus,
       // The same renewal the REST client uses: one call in flight, and its own 401 cannot re-enter it.
@@ -68,9 +87,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     // catch up, instead of waiting for the next backoff tick.
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
+      // Reconnect first: the browser kills background sockets, and `start()` resumes from the revision this
+      // tab applied (`?since=`), so the server replays the delta or sends one `resync`. Then *ask* whether
+      // anything moved, instead of marking the whole cache stale on the chance that it did — coming back to
+      // a tab is the most common interaction there is, and it must not be the most expensive one.
       client.stop();
       client.start();
-      void queryClient.invalidateQueries();
+      void client.checkStale();
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => {

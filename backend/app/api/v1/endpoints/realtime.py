@@ -111,6 +111,9 @@ async def revision(actor: CurrentUser, scope: ScopeDep) -> dict[str, Any]:
     topics = realtime.topics_for(perms=perms, is_portal=scope.is_portal)
     return {
         "revision": realtime.hub.revision,
+        # Whether this revision is comparable across workers. A client only needs it for diagnostics; the
+        # comparison itself is unchanged, and a single-process deployment simply reports `false`.
+        "shared": realtime.hub.shared,
         "topics": {topic: value for topic, value in realtime.hub.topic_revisions().items() if topic in topics},
         "subscribers": realtime.hub.subscriber_count(),
     }

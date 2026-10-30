@@ -11,7 +11,7 @@ from sqlalchemy import select
 from app.api.serializers import notification_brief
 from app.api.v1.deps import CurrentUser, DbSession, RequestsView, ScopeDep
 from app.models.requests import Notification
-from app.schemas.out import DashboardChannelOut, DashboardStatusOut, DashboardSummaryOut, RequestOut
+from app.schemas.out import DashboardChannelOut, DashboardHomeOut, DashboardStatusOut, DashboardSummaryOut, RequestOut
 from app.services import dashboard
 
 router = APIRouter(tags=["dashboard"])
@@ -20,6 +20,26 @@ router = APIRouter(tags=["dashboard"])
 @router.get("/dashboard/summary", summary="KPI row (today, avg first response, SLA, overdue)", response_model=DashboardSummaryOut)
 async def summary(session: DbSession, scope: ScopeDep, actor: RequestsView) -> dict[str, Any]:
     return await dashboard.summary(session, scope)
+
+
+@router.get(
+    "/dashboard/home",
+    summary="The whole dashboard first paint in one response (KPIs, chart, donut, today, recent)",
+    response_model=DashboardHomeOut,
+)
+async def home(
+    session: DbSession,
+    scope: ScopeDep,
+    actor: RequestsView,
+    days: int = Query(default=7, ge=1, le=90, description="window of the channel chart"),
+    recent_limit: int = Query(default=8, ge=1, le=50),
+) -> dict[str, Any]:
+    """Same permission as every other dashboard read (`requests.view`), same scope, one round trip.
+
+    The five single-purpose endpoints stay: an embedded client or a single card can still ask for exactly what
+    it needs, and removing them would break consumers that exist. The SPA now asks this one instead.
+    """
+    return await dashboard.home(session, scope, channels_days=days, recent_limit=recent_limit)
 
 
 @router.get("/dashboard/channels", summary="Requests per channel per day", response_model=list[DashboardChannelOut])

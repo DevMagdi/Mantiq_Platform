@@ -14,6 +14,8 @@ from app.services import clients as clients_svc
 
 
 async def summary(session: AsyncSession, scope: Scope) -> dict[str, Any]:
+    """The KPI row. `kpis()` is one statement (R15 P2); the client total is only meaningful — and only
+    permitted — for an office-wide scope, so it stays a second one rather than a second *shape* of the first."""
     kpis = await repo.kpis(session, scope)
     if scope.mode in {"all", "owner", "seeded"}:
         kpis["clients_total"] = int((await session.execute(_client_count_stmt(scope))).scalar_one())
@@ -39,6 +41,24 @@ async def recent_requests(session: AsyncSession, scope: Scope, *, limit: int = 8
     return [serialize_request(r) for r in rows]
 
 
+def _lead_brief_options() -> list[Any]:
+    """The four lead fields the «اليوم» board prints — and none of the graph `Lead` eagerly carries.
+
+    `Lead` loads its assignee (with role), insurance type, current insurer and lost reason on every read. That
+    is right for the board card; it is 4 queries per page for a list that renders `name` and `mobile`.
+    """
+    from sqlalchemy.orm import noload
+
+    from app.models.leads import Lead
+
+    return [
+        noload(Lead.assignee),
+        noload(Lead.insurance_type),
+        noload(Lead.current_insurer),
+        noload(Lead.lost_reason),
+    ]
+
+
 async def today_board(session: AsyncSession, scope: Scope, *, limit: int = 10) -> dict[str, Any]:
     """«اليوم» (A5): what needs a human today, from data the system already owns — overdue SLA
     requests, lead follow-ups due, and installments falling due within 14 days. Every list reads
@@ -54,33 +74,21 @@ async def today_board(session: AsyncSession, scope: Scope, *, limit: int = 10) -
     now = datetime.now(UTC)
     open_statuses = [RequestStatus.NEW, RequestStatus.IN_PROGRESS, RequestStatus.WAITING_INSURER]
 
-    overdue_stmt = with_scope(select(ServiceRequest), scope, "request").where(
+    # R15 P2: the same eager-load policy the requests list uses (see `requests_repo.list_options`) — these
+    # rows are serialised as briefs, and without it the auth graph was re-read once per assignee.
+    from app.repositories.requests_repo import list_options
+
+    overdue_stmt = with_scope(select(ServiceRequest).options(*list_options()), scope, "request").where(
         ServiceRequest.status.in_(open_statuses),
         (ServiceRequest.is_overdue.is_(True)) | (ServiceRequest.sla_due_at < now),
-    )
-    overdue_count = int(
-        (
-            await session.execute(
-                with_scope(select(func.count()).select_from(ServiceRequest), scope, "request").where(
-                    ServiceRequest.status.in_(open_statuses),
-                    (ServiceRequest.is_overdue.is_(True)) | (ServiceRequest.sla_due_at < now),
-                )
-            )
-        ).scalar_one()
     )
     overdue_rows = (
         (await session.execute(overdue_stmt.order_by(ServiceRequest.sla_due_at.asc().nulls_first()).limit(limit))).scalars().all()
     )
 
-    follow_stmt = with_scope(select(Lead), scope, "lead").where(Lead.next_followup_at.is_not(None), Lead.next_followup_at <= now)
-    follow_count = int(
-        (
-            await session.execute(
-                with_scope(select(func.count()).select_from(Lead), scope, "lead").where(
-                    Lead.next_followup_at.is_not(None), Lead.next_followup_at <= now
-                )
-            )
-        ).scalar_one()
+    # four scalar fields are rendered; the lead's whole relation graph is not
+    follow_stmt = with_scope(select(Lead).options(*_lead_brief_options()), scope, "lead").where(
+        Lead.next_followup_at.is_not(None), Lead.next_followup_at <= now
     )
     follow_rows = (await session.execute(follow_stmt.order_by(Lead.next_followup_at.asc()).limit(limit))).scalars().all()
 
@@ -94,15 +102,40 @@ async def today_board(session: AsyncSession, scope: Scope, *, limit: int = 10) -
         .limit(limit)
     )
     due_rows = (await session.execute(due_stmt)).all()
-    due_count = int(
-        (
-            await session.execute(
+
+    # R15 P2: the three "how many are there" numbers are one round trip, not three. Each subquery is the
+    # *same* scoped predicate as the list it counts — the alternative (counting the rows we fetched) would
+    # report "10" for every group whose list is capped at 10, which is the kind of quiet lie a dashboard
+    # cannot afford.
+    counts = (
+        await session.execute(
+            select(
                 with_scope(
-                    select(func.count()).select_from(Installment).join(Policy, Installment.policy_id == Policy.id), scope, "policy"
-                ).where(Installment.status != InstallmentStatus.PAID, Installment.paid_at.is_(None), Installment.due_date <= horizon)
+                    select(func.count())
+                    .select_from(ServiceRequest)
+                    .where(
+                        ServiceRequest.status.in_(open_statuses),
+                        (ServiceRequest.is_overdue.is_(True)) | (ServiceRequest.sla_due_at < now),
+                    ),
+                    scope,
+                    "request",
+                ).scalar_subquery(),
+                with_scope(
+                    select(func.count()).select_from(Lead).where(Lead.next_followup_at.is_not(None), Lead.next_followup_at <= now),
+                    scope,
+                    "lead",
+                ).scalar_subquery(),
+                with_scope(
+                    select(func.count()).select_from(Installment).join(Policy, Installment.policy_id == Policy.id),
+                    scope,
+                    "policy",
+                )
+                .where(Installment.status != InstallmentStatus.PAID, Installment.paid_at.is_(None), Installment.due_date <= horizon)
+                .scalar_subquery(),
             )
-        ).scalar_one()
-    )
+        )
+    ).one()
+    overdue_count, follow_count, due_count = int(counts[0]), int(counts[1]), int(counts[2])
     return {
         "generated_at": now,
         "overdue_requests": {"count": overdue_count, "items": [serialize_request(r) for r in overdue_rows]},
@@ -134,6 +167,29 @@ async def today_board(session: AsyncSession, scope: Scope, *, limit: int = 10) -
                 for inst, policy_no, client_id in due_rows
             ],
         },
+    }
+
+
+async def home(session: AsyncSession, scope: Scope, *, channels_days: int = 7, recent_limit: int = 8) -> dict[str, Any]:
+    """Everything screen 1 paints, from ONE session and one call (R15 P0-B).
+
+    Composition, not copy-paste: each section is the function the individual endpoint already calls, so a rule
+    cannot drift between "the dashboard" and "the dashboard endpoint". The saving is not fewer SQL statements
+    — it is five round trips, five authentications and five pooled connections becoming one, which is what
+    made the first paint look like six cards popping in one at a time.
+
+    Order matters for latency: the KPIs go first so a slow "today" board cannot delay the numbers the
+    operator reads immediately. (They are sequential on one session by design — Postgres serves one connection
+    per request here, and the pool is the shared resource under load.)
+    """
+    kpis = await summary(session, scope)
+    return {
+        "summary": kpis,
+        "channels_days": channels_days,
+        "channels": await channels(session, scope, days=channels_days),
+        "status_breakdown": await status_breakdown(session, scope),
+        "today": await today_board(session, scope),
+        "recent": await recent_requests(session, scope, limit=recent_limit),
     }
 
 
