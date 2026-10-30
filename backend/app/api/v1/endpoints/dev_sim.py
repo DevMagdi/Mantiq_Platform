@@ -12,6 +12,7 @@ included by mistake" must not be the only thing standing between production and 
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -25,9 +26,32 @@ from app.api.v1.endpoints.webhooks import stage_inbound_media
 from app.integrations.registry import whatsapp_provider
 from app.integrations.sims import require_simulation_allowed
 from app.integrations.storage import storage
-from app.services import intake
+from app.services import intake, integrations_settings
 
 router = APIRouter(tags=["simulator (dev/test only)"])
+
+#: Media ids the panel makes up itself. They mean nothing to Meta, so they must never reach a provider call.
+SIM_MEDIA_PREFIX = "sim-media-"
+#: What a simulated voice note "contains" — enough bytes to prove the storage path ran end to end.
+SIM_AUDIO_BYTES = b"SIM-AUDIO"
+SIM_AUDIO_MIME = "audio/ogg"
+
+
+def _safe(part: str, limit: int) -> str:
+    return re.sub(r"[^A-Za-z0-9_.-]", "_", part)[:limit]
+
+
+def _stage_sim_media(external_id: str, media_id: str) -> tuple[str, str, int]:
+    """Write the fake bytes ourselves instead of asking Meta about an id it never issued.
+
+    The panel used to hand `sim-media-<ts>` to `stage_inbound_media`, which called Graph whenever the WhatsApp
+    driver was live: Meta answered 400, `fetch_media` raised, and the simulator endpoint returned a 500 — the
+    one screen a developer opens *because* the real channel is not working yet.
+    """
+    key = f"media/{_safe(external_id, 80)}/{_safe(media_id, 60)}"
+    storage().put_object(key, SIM_AUDIO_BYTES, SIM_AUDIO_MIME)
+    return key, SIM_AUDIO_MIME, len(SIM_AUDIO_BYTES)
+
 
 _PANEL_HTML_PATH = Path(__file__).with_name("sim_panel.html")
 
@@ -51,8 +75,27 @@ class _SimWhatsApp(BaseModel):
 async def sim_whatsapp(body: _SimWhatsApp, session: DbSession) -> dict[str, Any]:
     require_simulation_allowed("Simulator API")
     external_id = body.external_id or f"wamid.sim_{datetime.now(UTC).timestamp():.6f}"
-    provider = whatsapp_provider()
-    media_key, media_mime, media_size = await stage_inbound_media(provider, storage(), external_id, body.media_id)
+    media_key: str | None = None
+    media_mime: str | None = None
+    media_size = 0
+    if body.media_id:
+        if body.media_id.startswith(SIM_MEDIA_PREFIX):
+            media_key, media_mime, media_size = _stage_sim_media(external_id, body.media_id)
+        else:
+            # A real-looking id: go through the provider, but a provider/storage failure must not take the
+            # message down with it — the same rule the live webhook follows (one unreadable file ≠ lost text).
+            try:
+                media_key, media_mime, media_size = await stage_inbound_media(whatsapp_provider(), storage(), external_id, body.media_id)
+            except Exception as exc:
+                await integrations_settings.record_event(
+                    session,
+                    provider="whatsapp",
+                    event_type="media_fetch_failed",
+                    external_id=external_id,
+                    status="error",
+                    detail=f"{type(exc).__name__}: {str(exc)[:200]}",
+                )
+                await session.commit()
     result = await intake.ingest_whatsapp_message(
         session,
         external_id=external_id,
