@@ -49,6 +49,8 @@ const providerState = vi.hoisted(() => (overrides: Partial<ProviderState> = {}):
   last_tested_at: null,
   last_test_status: null,
   last_test_detail: null,
+  inbound_health: "never",
+  last_test_warnings: [],
   updated_at: null,
   ...overrides,
 }));

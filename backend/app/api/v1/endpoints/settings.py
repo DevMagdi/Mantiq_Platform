@@ -43,9 +43,14 @@ class ProviderStateOut(BaseModel):
     missing_fields: list[str] = Field(default_factory=list, description="named credentials still missing")
     last_webhook_at: str | None = None
     last_error: str | None = None
+    inbound_health: str = Field(
+        default="never",
+        description="receiving | stale | never | failing — derived from inbound events, not from the outbound test (R16)",
+    )
     last_tested_at: str | None = None
     last_test_status: str | None = None
     last_test_detail: str | None = None
+    last_test_warnings: list[str] = Field(default_factory=list, description="non-fatal notes from the last connection test")
     updated_at: str | None = None
 
 
@@ -96,6 +101,9 @@ class ConnectionTestOut(BaseModel):
     provider: str
     ok: bool
     detail: str
+    #: non-fatal findings (a token expiring in 48 hours, a WABA this app is not subscribed to). Present and
+    #: separate from `detail` so the screen can show them as a warning instead of inside a green sentence.
+    warnings: list[str] = Field(default_factory=list)
     took_ms: int
     mode: str
     tested_at: str

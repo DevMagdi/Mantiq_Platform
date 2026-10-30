@@ -252,6 +252,10 @@ class State:
     missing_fields: list[str] = field(default_factory=list)
     last_webhook_at: str | None = None
     last_error: str | None = None
+    #: receiving | stale | never | failing — derived from the inbound event log, not from the outbound test
+    inbound_health: str = "never"
+    #: non-fatal notes from the last connection test (temporary token, WABA subscription); persisted with it
+    last_test_warnings: list[str] = field(default_factory=list)
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -264,9 +268,11 @@ class State:
             "missing_fields": self.missing_fields,
             "last_webhook_at": self.last_webhook_at,
             "last_error": self.last_error,
+            "inbound_health": self.inbound_health,
             "last_tested_at": self.last_tested_at,
             "last_test_status": self.last_test_status,
             "last_test_detail": self.last_test_detail,
+            "last_test_warnings": self.last_test_warnings,
             "updated_at": self.updated_at,
         }
 
@@ -377,6 +383,9 @@ async def state(session: AsyncSession, provider: str) -> State:
         .first()
     )
     out.last_webhook_at = latest_ok.occurred_at.astimezone(UTC).isoformat() if latest_ok else None
+    out.inbound_health = _inbound_health(latest_ok, latest_err)
+    stored_warnings = (row.config if row is not None and row.config else {}).get(TEST_WARNINGS_KEY) or []
+    out.last_test_warnings = [str(item) for item in stored_warnings if str(item).strip()]
     # A *stale* error is not an error. A handshake rejected before the operator pasted the right verify token
     # stayed on the card forever: the fix worked, the screen kept saying it had not. The error is reported only
     # while it is the newest thing that happened for this provider — a later success retires it.
@@ -384,6 +393,27 @@ async def state(session: AsyncSession, provider: str) -> State:
     out.last_error = (latest_err.detail or latest_err.status) if latest_err and error_is_current else None
     out.connection_status = "error" if out.last_test_status == "failed" else ("connected" if not missing else "not_connected")
     return out
+
+
+#: A channel is "receiving" when something arrived in this window. One day is short enough to catch a broken
+#: subscription the morning after a deploy and long enough that a quiet weekend is not reported as an outage.
+INBOUND_WINDOW = timedelta(hours=24)
+
+
+def _inbound_health(latest_ok: WebhookEvent | None, latest_err: WebhookEvent | None) -> str:
+    """`receiving | stale | never | failing` — what the badge above "connected" cannot say.
+
+    «متصل» answers one question: do the credentials we hold work when we call out? It says nothing about
+    whether Meta is calling *us*. These four words answer that, and each one has a different next step, which
+    is the whole point: a token problem and a Callback-URL problem both look like "no messages" otherwise.
+    """
+    if latest_err is not None and (latest_ok is None or latest_err.occurred_at > latest_ok.occurred_at):
+        return "failing"
+    if latest_ok is None:
+        return "never"
+    if datetime.now(UTC) - latest_ok.occurred_at <= INBOUND_WINDOW:
+        return "receiving"
+    return "stale"
 
 
 def _status_of(state: State) -> str:
@@ -754,14 +784,23 @@ async def resolved_for_registry(session: AsyncSession) -> dict[str, ResolvedInte
     return out
 
 
-# `run_connection_test`, not `test_connection`: a module-level name starting with `test_` is read as a pytest
-# case by the linters (PT028 fired on the first draft), and a function that takes a request's body is not one.
 @dataclass(frozen=True)
 class TestOutcome:
     ok: bool
     detail: str
+    #: things that are not failures but that the operator must see (a token that dies in 48 hours, a WABA
+    #: the app is not subscribed to). Kept apart from `detail` so the screen can render them as a warning
+    #: instead of burying them inside a green sentence.
+    warnings: tuple[str, ...] = ()
 
 
+#: persisted under this key in `integration_configs.config` — outside `PROVIDER_FIELDS`, so it never reaches the
+#: form (see `_stored_config`, which keeps only the provider's real fields), and self-clears on the next save.
+TEST_WARNINGS_KEY = "_test_warnings"
+
+
+# `run_connection_test`, not `test_connection`: a module-level name starting with `test_` is read as a pytest
+# case by the linters (PT028 fired on the first draft), and a function that takes a request's body is not one.
 async def run_connection_test(
     session: AsyncSession,
     actor: User,
@@ -794,6 +833,10 @@ async def run_connection_test(
     row.last_tested_at = datetime.now(UTC)
     row.last_test_status = "ok" if outcome.ok else "failed"
     row.last_test_detail = outcome.detail[:900]
+    # Re-assign, never mutate: a JSON column is only flushed when the attribute itself is set. Stored beside
+    # the row (not in the response only) so the warning survives a page reload — a badge the operator sees
+    # once and never again is a badge that gets ignored.
+    row.config = {**(row.config or {}), TEST_WARNINGS_KEY: list(outcome.warnings)}
     row.updated_by = actor.id
     await audit.write(
         session,
@@ -817,6 +860,7 @@ async def run_connection_test(
         "provider": provider,
         "ok": outcome.ok,
         "detail": outcome.detail,
+        "warnings": list(outcome.warnings),
         "took_ms": took_ms,
         #: a test in a dev/test process never reaches the network — the word says so instead of "sim",
         #: which R9 removed from the provider state vocabulary
@@ -929,6 +973,9 @@ def _assert_provider(provider: str) -> None:
 #: Meta rejects a token that expires sooner than this for anything but a short trial; the operator needs to
 #: know *before* the campaign, not from a queue of failed sends at 3 a.m.
 _TEMP_TOKEN_DAYS = 7
+#: Under this window the token is an active incident, not a note: a 24-hour dashboard token dies overnight and
+#: the channel goes silent with no other symptom.
+_TEMP_TOKEN_URGENT_HOURS = 48
 
 
 def _is_dev_placeholder_secret(value: str) -> bool:
@@ -1017,6 +1064,13 @@ async def _test_whatsapp(resolved: ResolvedIntegration) -> TestOutcome:
                     f"Meta رفض قراءة الرقم ({probe.status_code}): {probe.text[:220]}",
                 )
             number = probe.json() or {}
+            warnings = await _whatsapp_warnings(
+                client,
+                base=base,
+                token=token,
+                app_id=app_id,
+                business_account_id=resolved.value("business_account_id"),
+            )
     except httpx.HTTPError as exc:
         return TestOutcome(False, f"تعذّر الوصول إلى graph.facebook.com: {type(exc).__name__}")
 
@@ -1030,12 +1084,59 @@ async def _test_whatsapp(resolved: ResolvedIntegration) -> TestOutcome:
     detail += f"، Phone Number ID {phone_id}"
     expires = data.get("expires_at")
     if isinstance(expires, (int, float)) and 0 < expires - time.time() < _TEMP_TOKEN_DAYS * 86400:
-        days = max(1, int((expires - time.time()) // 86400))
-        detail += (
-            f" — تنبيه: هذا توكن مؤقت ينتهي خلال {days} يوم؛ استخدم توكن System User دائم "
-            "من Business Settings (صلاحيات whatsapp_business_messaging وwhatsapp_business_management)."
+        seconds_left = max(0.0, float(expires) - time.time())
+        hours = max(1, int(seconds_left // 3600))
+        # 48 hours or less is an incident — the token dies before the operator's next working day
+        lead = f"خلال {hours} ساعة" if seconds_left < _TEMP_TOKEN_URGENT_HOURS * 3600 else f"خلال {max(1, int(seconds_left // 86400))} يوم"
+        sentence = (
+            f"هذا توكن مؤقت ينتهي {lead}؛ استخدم توكن System User دائم من Business Settings "
+            "(صلاحيات whatsapp_business_messaging وwhatsapp_business_management)."
         )
-    return TestOutcome(True, detail)
+        # both places on purpose: the sentence belongs to the readable detail, and the warning list is what the
+        # screen renders as a badge that survives a reload
+        detail += f" — تنبيه: {sentence}"
+        warnings.insert(0, sentence)
+    return TestOutcome(True, detail, tuple(warnings))
+
+
+async def _whatsapp_warnings(
+    client: Any,
+    *,
+    base: str,
+    token: str,
+    app_id: str,
+    business_account_id: str,
+) -> list[str]:
+    """Non-fatal checks that answer the question a green badge cannot: will messages actually arrive?
+
+    `GET /{waba}/subscribed_apps` is the only honest way to see whether this app is subscribed to the WABA —
+    Meta happily accepts a webhook that is never fired, and the symptom (a silent inbox) is identical to a
+    wrong token. A failure of *this* call is a warning: the credentials are proven by the two calls above, and
+    turning an optional probe into a red test would hide a working channel behind a missing permission.
+    """
+    warnings: list[str] = []
+    if not business_account_id:
+        warnings.append("أضف WABA ID للتحقق من اشتراك التطبيق في حقل messages — بدونه قد تُرسل Meta ولا يصل شيء.")
+        return warnings
+    try:
+        response = await client.get(f"{base}/{business_account_id}/subscribed_apps", headers={"Authorization": f"Bearer {token}"})
+    except Exception as exc:  # an optional probe never fails the test
+        warnings.append(f"تعذّر التحقق من اشتراك التطبيق في الـWABA ({type(exc).__name__}).")
+        return warnings
+    if response.status_code >= 400:
+        warnings.append(f"تعذّر قراءة اشتراك التطبيق في الـWABA ({response.status_code}) — تحقق من صلاحية whatsapp_business_management.")
+        return warnings
+    subscribed = set()
+    for item in (response.json() or {}).get("data") or []:
+        api_data = item.get("whatsapp_business_api_data") or {}
+        for candidate in (api_data.get("id"), item.get("id")):
+            if candidate:
+                subscribed.add(str(candidate))
+    if app_id and subscribed and str(app_id) not in subscribed:
+        warnings.append("التطبيق غير مشترك في الـWABA: اشترك في حقل messages من WhatsApp → Configuration وإلا لن تصل أي رسالة واردة.")
+    elif app_id and not subscribed:
+        warnings.append("لا توجد تطبيقات مشتركة في الـWABA: اشترك في حقل messages وإلا لن تصل أي رسالة واردة.")
+    return warnings
 
 
 async def _test_mobile_calls(resolved: ResolvedIntegration) -> TestOutcome:

@@ -2931,6 +2931,8 @@ export interface components {
             tested_at: string;
             /** Took Ms */
             took_ms: number;
+            /** Warnings */
+            warnings?: string[];
         };
         /** ContactCreate */
         ContactCreate: {
@@ -4918,6 +4920,12 @@ export interface components {
              * @default not_connected
              */
             connection_status: string;
+            /**
+             * Inbound Health
+             * @description receiving | stale | never | failing — derived from inbound events, not from the outbound test (R16)
+             * @default never
+             */
+            inbound_health: string;
             /** Is Live */
             is_live: boolean;
             /** Last Error */
@@ -4926,6 +4934,11 @@ export interface components {
             last_test_detail?: string | null;
             /** Last Test Status */
             last_test_status?: string | null;
+            /**
+             * Last Test Warnings
+             * @description non-fatal notes from the last connection test
+             */
+            last_test_warnings?: string[];
             /** Last Tested At */
             last_tested_at?: string | null;
             /** Last Webhook At */
