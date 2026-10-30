@@ -105,7 +105,9 @@ export function ClientPicker({
           autoFocus={autoFocus}
           placeholder={placeholder ?? t("clientPicker.search")}
           onChange={(event) => setQuery(event.target.value)}
-          aria-label={t("clientPicker.search")}
+          // when the dialog labels this field («العميل»), that label is the name — an aria-label of its own
+          // would *replace* it and announce the search hint instead of the field's purpose
+          aria-label={id ? undefined : t("clientPicker.search")}
           data-testid="client-picker-input"
         />
       </div>

@@ -53,10 +53,18 @@ test.describe("R7 · the Phase-2 loop", () => {
     await page.getByRole("button", { name: ar.phase2.newPolicy }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
+    // R15 P2: the client field is a typeahead now (two characters, debounced, ≤20 rows), not a `<select>` of
+    // 200. Its name is still the dialog's own label — that is asserted here, in a real browser, because a
+    // picker that searches but cannot be named is not an improvement for anyone using a screen reader.
     const picker = dialog.getByLabel(ar.phase2.form.client);
-    // the option list is filled by a query — choosing before it lands silently does nothing
-    await expect.poll(async () => (await picker.locator("option").count()) > 1, { timeout: 20_000 }).toBe(true);
-    await picker.selectOption({ label: client.name });
+    await expect(picker).toHaveAccessibleName(ar.phase2.form.client);
+    await picker.fill(client.name);
+    // choosing before the query lands silently does nothing — so wait for the row this test created
+    const option = dialog.getByRole("option", { name: client.name });
+    await expect(option).toBeVisible({ timeout: 20_000 });
+    await option.click();
+    // the field becomes a chip carrying the name, which is what the draft is submitted with
+    await expect(dialog.getByTestId("client-picker-selected")).toContainText(client.name);
     await dialog.getByLabel(ar.phase2.form.premium).fill(premium);
     await dialog.getByLabel(ar.phase2.form.plan).selectOption("quarterly");
     await dialog.getByRole("button", { name: ar.phase2.saveDraft }).click();

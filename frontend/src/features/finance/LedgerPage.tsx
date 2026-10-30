@@ -278,17 +278,21 @@ function PostEntryDialog({ onClose }: { onClose: () => void }) {
           </select>
         </label>
 
-        <label className="block text-[12.5px] font-semibold text-ink">
-          {t("finance.client")}
+        <div className="block text-[12.5px] font-semibold text-ink">
+          {/* the label points at the search field's id, so the control is named «العميل» and not «بحث» */}
+          <label htmlFor="ledger-client" className="block">
+            {t("finance.client")}
+          </label>
           {/* R15 P2: a debounced search (≤20 rows) instead of every client in a `<select>` */}
           <div className="mt-1.5">
             <ClientPicker
+              id="ledger-client"
               value={form.client_id}
               onChange={(id) => setForm((current) => ({ ...current, client_id: id }))}
               placeholder={t("finance.noClient")}
             />
           </div>
-        </label>
+        </div>
 
         <label className="block text-[12.5px] font-semibold text-ink">
           {t("finance.note")}
