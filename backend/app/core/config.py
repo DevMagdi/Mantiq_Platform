@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     # so the comma-separated form this repo documents (`infra/.env.example`, compose) crashes the import.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = Field(default_factory=lambda: ["http://localhost:5173"])
     TRUST_HOPS: int = 1
+    #: Where the SPA actually lives. The API serves `/api/*` and a few HTML pages of its own (the simulator
+    #: panel); a link from one of those pages to a screen of the app must use this, never the request origin,
+    #: or in `uvicorn :8000` + `vite :5173` it points at a port that has no `/inbox` and 404s (R17 §5).
+    #:
+    #: Empty means "derive it" — see `frontend_url`. That keeps production working without a new required
+    #: variable (compose does not pass an unlisted one), while a fresh local `.env` still resolves to
+    #: `http://localhost:5173`.
+    FRONTEND_URL: str = ""
 
     # --- storage (recordings & attachments) ---
     STORAGE_BACKEND: str = "local"  # local | s3
@@ -282,6 +290,16 @@ class Settings(BaseSettings):
             if getattr(self, field_name) == placeholder:
                 setattr(self, field_name, "")
         return self
+
+    @property
+    def frontend_url(self) -> str:
+        """The SPA's origin for links rendered inside API-served pages.
+
+        `FRONTEND_URL` wins; otherwise the deployment's own public origin (`PUBLIC_BASE_URL`, required in
+        production by compose), otherwise the dev default. All three keep the app and the API on the same
+        host in a single-domain deployment, which is the normal production shape.
+        """
+        return (self.FRONTEND_URL or self.PUBLIC_BASE_URL or "http://localhost:5173").rstrip("/")
 
     @property
     def is_production(self) -> bool:

@@ -12,6 +12,7 @@ included by mistake" must not be the only thing standing between production and 
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -56,9 +57,19 @@ def _stage_sim_media(external_id: str, media_id: str) -> tuple[str, str, int]:
 _PANEL_HTML_PATH = Path(__file__).with_name("sim_panel.html")
 
 
-def _panel_html() -> str:
-    """The markup sits in a sibling file so the CSS lines stay readable."""
-    return _PANEL_HTML_PATH.read_text(encoding="utf-8")
+#: Replaced with a JSON string literal (quotes and all) before the page is served — never with raw text.
+_FRONTEND_SLOT = "__FRONTEND_URL__"
+
+
+def _panel_html(frontend_url: str) -> str:
+    """The markup sits in a sibling file so the CSS lines stay readable.
+
+    The app's address is *injected*, not derived from the request: the panel is served by the API on :8000,
+    so `location.origin + "/inbox"` is a 404 — the screen lives on the SPA's origin (:5173 in development,
+    a different host entirely in production). `json.dumps` is used so a configured URL can never break out of
+    the string literal it lands in.
+    """
+    return _PANEL_HTML_PATH.read_text(encoding="utf-8").replace(_FRONTEND_SLOT, json.dumps(frontend_url.rstrip("/")))
 
 
 class _SimWhatsApp(BaseModel):
@@ -115,7 +126,9 @@ async def sim_whatsapp(body: _SimWhatsApp, session: DbSession) -> dict[str, Any]
 @router.get("/dev/sim", summary="Simulator panel (dev/test only)", include_in_schema=False)
 async def sim_panel() -> HTMLResponse:
     require_simulation_allowed("Simulator panel")
-    return HTMLResponse(_panel_html())
+    from app.core.config import get_settings
+
+    return HTMLResponse(_panel_html(get_settings().frontend_url))
 
 
 class _SimCall(BaseModel):
