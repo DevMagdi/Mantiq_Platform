@@ -88,7 +88,12 @@ class PolicyDocument(UUIDPkMixin, TimestampMixin, Base):
 
 class Installment(UUIDPkMixin, TimestampMixin, Base):
     __tablename__ = "installments"
-    __table_args__ = (sa.Index("ix_installments_policy_due", "policy_id", "due_date"),)
+    __table_args__ = (
+        sa.Index("ix_installments_policy_due", "policy_id", "due_date"),
+        # R15: the «اليوم» board scans a *date range* across policies (due within 14 days, ordered by date).
+        # The composite above leads with `policy_id`, so it cannot serve that; PostgreSQL sorted the table.
+        sa.Index("ix_installments_due", "due_date"),
+    )
 
     policy_id: Mapped[UUID] = mapped_column(sa.Uuid(), sa.ForeignKey("policies.id", ondelete="CASCADE"), nullable=False)
     sequence_no: Mapped[int] = mapped_column(sa.Integer, nullable=False)

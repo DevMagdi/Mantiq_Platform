@@ -112,10 +112,20 @@ async def board(
     assigned_to: UUID | None = None,
     q: str | None = None,
     unassigned: bool = False,
+    per_column: int = Query(default=60, ge=10, le=200, description="cards per lane (the rest is reported in `total`)"),
 ) -> dict[str, Any]:
-    """`assigned_to` narrows to one rep, `unassigned=true` shows the pool. Neither can widen the scope."""
-    grouped = await repo.board(session, scope, assigned_to=assigned_to, q=q, unassigned=unassigned)
-    return {"columns": [{"status": status, "count": len(rows), "items": [lead_brief(r) for r in rows]} for status, rows in grouped.items()]}
+    """`assigned_to` narrows to one rep, `unassigned=true` shows the pool. Neither can widen the scope.
+
+    Each lane is capped (`per_column`, default 60) and reports its true `total`, so the badge never lies and
+    the browser never mounts a lane it cannot scroll.
+    """
+    grouped, totals = await repo.board(session, scope, assigned_to=assigned_to, q=q, unassigned=unassigned, per_column=per_column)
+    return {
+        "columns": [
+            {"status": status, "count": len(rows), "total": totals.get(status, len(rows)), "items": [lead_brief(r) for r in rows]}
+            for status, rows in grouped.items()
+        ]
+    }
 
 
 @router.get("/leads/stats", summary="Kanban KPI row", response_model=LeadStatsOut)

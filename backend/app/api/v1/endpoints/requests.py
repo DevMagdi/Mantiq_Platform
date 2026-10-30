@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import mimetypes
 import uuid
+from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -95,17 +96,41 @@ async def create_request(body: RequestCreate, session: DbSession, scope: ScopeDe
     return request_brief(request)
 
 
+#: how much of the thread one open loads. 30 is what a chat pane shows; the rest is one request away.
+THREAD_PAGE = 30
+#: the side panels are not conversations and nobody scrolls them: a window is enough to orient.
+NOTES_PAGE, CALLS_PAGE, ATTACHMENTS_PAGE = 50, 20, 100
+
+
 @router.get("/requests/{request_id}", response_model=RequestDetailOut)
-async def get_request(request_id: UUID, session: DbSession, scope: ScopeDep, actor: RequestsView) -> dict[str, Any]:
+async def get_request(
+    request_id: UUID,
+    session: DbSession,
+    scope: ScopeDep,
+    actor: RequestsView,
+    message_limit: int = Query(default=THREAD_PAGE, ge=1, le=200, description="newest messages to include"),
+) -> dict[str, Any]:
+    """The request plus the newest page of its thread — never the whole history (R15 P1-A).
+
+    `messages_total` is what lets the pane say "load older" honestly: the client compares how many it holds
+    with how many exist, so a page that happens to be exactly the page size cannot hide an older one.
+    """
     request = await requests_svc.get(session, request_id, scope)
-    return request_detail(
+    attachments = await repo.attachments(session, request.id, limit=ATTACHMENTS_PAGE)
+    detail = request_detail(
         request,
-        messages=await repo.messages(session, request.id),
-        notes=[] if scope.is_portal else await repo.notes(session, request.id),
-        calls=await repo.calls(session, request.id),
+        messages=await repo.messages(session, request.id, limit=message_limit),
+        notes=[] if scope.is_portal else await repo.notes(session, request.id, limit=NOTES_PAGE),
+        calls=await repo.calls(session, request.id, limit=CALLS_PAGE),
         scope=scope,
-        attachments=await repo.attachments(session, request.id),
+        attachments=attachments,
     )
+    totals = await repo.thread_totals(session, request.id)
+    detail["messages_total"] = totals["messages"]
+    detail["notes_total"] = 0 if scope.is_portal else totals["notes"]
+    detail["calls_total"] = totals["calls"]
+    detail["attachments_total"] = totals["attachments"]
+    return detail
 
 
 @router.patch("/requests/{request_id}")
@@ -136,9 +161,22 @@ async def assign(request_id: UUID, body: _AssignIn, session: DbSession, scope: S
 
 
 @router.get("/requests/{request_id}/messages", response_model=list[RequestMessageOut])
-async def get_messages(request_id: UUID, session: DbSession, scope: ScopeDep, actor: RequestsView) -> list[dict[str, Any]]:
+async def get_messages(
+    request_id: UUID,
+    session: DbSession,
+    scope: ScopeDep,
+    actor: RequestsView,
+    limit: int = Query(default=THREAD_PAGE, ge=1, le=200),
+    before: datetime | None = Query(default=None, description="cursor: only messages older than this instant"),
+) -> list[dict[str, Any]]:
+    """One page of the thread, oldest first, newest page by default.
+
+    The response stays a plain list — existing consumers keep working — and paging is expressed in the query
+    string: `?before=<created_at of the oldest message you hold>`. A caller that wants to know whether more
+    exists compares with `messages_total` from the detail payload.
+    """
     request = await requests_svc.get(session, request_id, scope)
-    rows = await repo.messages(session, request.id)
+    rows = await repo.messages(session, request.id, limit=limit, before=before)
     # Attachments belong to a message (owner_id = message id) and to the request (request_id):
     # one query for the whole thread, grouped in memory — never one query per message.
     from sqlalchemy import select
