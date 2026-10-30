@@ -95,6 +95,12 @@ export const en: Messages = {
     colStatus: "Status",
     minutes: "min",
   },
+  clientPicker: {
+    search: "Search for a client by name…",
+    empty: "No matching client — try more letters",
+    selected: "Selected client",
+    clear: "Clear the selected client",
+  },
   inbox: {
     title: "Unified request inbox",
     subtitle: "WhatsApp, calls and email in one place",
@@ -103,6 +109,8 @@ export const en: Messages = {
     showAll: "Show all open requests",
     countAria: "Requests in this view: {n}",
     reply: "Write your reply…",
+    loadOlder: "Load older messages",
+    olderCount: "{n} older messages in this thread",
     send: "Send",
     updateStatus: "Update status",
     details: "Request details",
@@ -128,6 +136,7 @@ export const en: Messages = {
     inboundCall: "Inbound call",
   },
   leads: {
+    windowed: "Showing the newest {shown} of {total} — search to reach the rest",
     filterRep: "Sales rep",
     filterAllReps: "All reps",
     filterStage: "Stage",

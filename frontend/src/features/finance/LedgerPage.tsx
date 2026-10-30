@@ -8,6 +8,8 @@ import { Ban, Plus } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { ClientPicker } from "@/components/ClientPicker";
+
 import { Modal } from "@/components/Modal";
 import { useToast } from "@/components/Toast";
 import { Badge, Button, Card, DataTable, PageHeader, Segmented, StateBlock } from "@/components/ui";
@@ -187,11 +189,6 @@ function PostEntryDialog({ onClose }: { onClose: () => void }) {
     note: "",
   });
 
-  const clients = useQuery({
-    queryKey: ["clients", "finance-picker"],
-    queryFn: () => api.get<{ items: { id: string; name: string }[] }>("/clients", { page_size: 200 }),
-  });
-
   const post = useMutation({
     mutationFn: () =>
       api.post<LedgerEntry>("/finance/ledger", {
@@ -283,18 +280,14 @@ function PostEntryDialog({ onClose }: { onClose: () => void }) {
 
         <label className="block text-[12.5px] font-semibold text-ink">
           {t("finance.client")}
-          <select
-            className="input mt-1.5 w-full"
-            value={form.client_id}
-            onChange={(event) => setForm((current) => ({ ...current, client_id: event.target.value }))}
-          >
-            <option value="">{t("finance.noClient")}</option>
-            {(clients.data?.items ?? []).map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
+          {/* R15 P2: a debounced search (≤20 rows) instead of every client in a `<select>` */}
+          <div className="mt-1.5">
+            <ClientPicker
+              value={form.client_id}
+              onChange={(id) => setForm((current) => ({ ...current, client_id: id }))}
+              placeholder={t("finance.noClient")}
+            />
+          </div>
         </label>
 
         <label className="block text-[12.5px] font-semibold text-ink">

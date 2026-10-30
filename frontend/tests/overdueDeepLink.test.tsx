@@ -44,6 +44,10 @@ vi.mock("@/lib/api/client", () => {
     api: {
       get: (path: string, query?: Record<string, unknown>) => {
         calls.push({ path, query });
+        // R15 P0-B: the dashboard is one call now, not five (the five paths stay for any other screen)
+        if (path.startsWith("/dashboard/home")) {
+          return Promise.resolve({ summary: SUMMARY, channels: [], status_breakdown: [], today: {}, recent: [], channels_days: 7 });
+        }
         if (path.startsWith("/dashboard/summary")) return Promise.resolve(SUMMARY);
         if (path.startsWith("/dashboard/channels")) return Promise.resolve([]);
         if (path.startsWith("/dashboard/status-breakdown")) return Promise.resolve([]);

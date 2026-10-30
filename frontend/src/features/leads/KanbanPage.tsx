@@ -118,7 +118,10 @@ export default function KanbanPage() {
     return COLUMNS.filter((column) => !isManager || !stage || column.key === stage).map((column) => {
       const found = source.find((entry) => entry.status === column.key);
       const items = (found?.items ?? []).filter((lead) => !needle || includesText(`${asText(lead.name)} ${asText(lead.mobile)}`, needle));
-      return { ...column, items, count: items.length };
+      // R15 P1-B: the lane renders the newest page the server sent, and the header shows how many exist.
+      // Searching filters what is on screen — the count then describes the results, not the stage, which is
+      // why the lane says "of N" rather than quietly changing what the badge means.
+      return { ...column, items, count: needle ? items.length : (found?.total ?? items.length), shown: items.length };
     });
   }, [board.data, query, stage, isManager]);
 
@@ -270,6 +273,8 @@ export default function KanbanPage() {
                 id={column.key}
                 title={column.label}
                 count={column.count}
+                shown={column.shown}
+                searching={Boolean(lower(asText(query)).trim())}
                 locked={column.key === "won"}
                 onLost={(lead) => setLosing(lead)}
                 onOpen={(lead) => navigate(`/leads/${lead.id}`)}
@@ -324,6 +329,8 @@ function Column({
   id,
   title,
   count,
+  shown,
+  searching,
   leads,
   locked,
   onOpen,
@@ -332,6 +339,8 @@ function Column({
   id: string;
   title: string;
   count: number;
+  shown: number;
+  searching: boolean;
   leads: Lead[];
   locked: boolean;
   onOpen: (lead: Lead) => void;
@@ -358,6 +367,12 @@ function Column({
           </li>
         ))}
       </ul>
+      {/* the lane holds the newest page; say so instead of implying the stage has 60 cards */}
+      {!searching && shown < count ? (
+        <p className="px-1 pb-1 pt-2 text-[11.5px] text-muted" data-testid={`lane-window-${id}`}>
+          {t("leads.windowed", { shown, total: count })}
+        </p>
+      ) : null}
       {locked ? <p className="px-1 pb-1 pt-2 text-[11.5px] text-muted">{t("leads.converted")}</p> : null}
     </div>
   );

@@ -93,6 +93,12 @@ export const ar = {
     colStatus: "الحالة",
     minutes: "د",
   },
+  clientPicker: {
+    search: "ابحث عن عميل بالاسم…",
+    empty: "لا يوجد عميل مطابق — جرّب حروفًا أكثر",
+    selected: "عميل محدد",
+    clear: "إلغاء اختيار العميل",
+  },
   inbox: {
     title: "صندوق الطلبات الموحد",
     subtitle: "واتساب والمكالمات والإيميل في مكان واحد",
@@ -101,6 +107,8 @@ export const ar = {
     showAll: "عرض كل الطلبات المفتوحة",
     countAria: "عدد الطلبات في هذا العرض: {n}",
     reply: "اكتب ردك…",
+    loadOlder: "تحميل رسائل أقدم",
+    olderCount: "{n} رسالة أقدم في السجل",
     send: "إرسال",
     updateStatus: "تحديث الحالة",
     details: "بيانات الطلب",
@@ -126,6 +134,7 @@ export const ar = {
     inboundCall: "مكالمة واردة",
   },
   leads: {
+    windowed: "يُعرض أحدث {shown} من {total} — استخدم البحث للوصول إلى الباقي",
     filterRep: "البياع",
     filterAllReps: "كل البياعة",
     filterStage: "المرحلة",

@@ -457,6 +457,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The whole dashboard first paint in one response (KPIs, chart, donut, today, recent)
+         * @description Same permission as every other dashboard read (`requests.view`), same scope, one round trip.
+         *
+         *     The five single-purpose endpoints stay: an embedded client or a single card can still ask for exactly what
+         *     it needs, and removing them would break consumers that exist. The SPA now asks this one instead.
+         */
+        get: operations["getApiV1DashboardHome"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dashboard/recent-requests": {
         parameters: {
             query?: never;
@@ -1094,6 +1117,9 @@ export interface paths {
         /**
          * Kanban payload (5 columns, scoped; manager can filter by rep)
          * @description `assigned_to` narrows to one rep, `unassigned=true` shows the pool. Neither can widen the scope.
+         *
+         *     Each lane is capped (`per_column`, default 60) and reports its true `total`, so the badge never lies and
+         *     the browser never mounts a lane it cannot scroll.
          */
         get: operations["getApiV1LeadsBoard"];
         put?: never;
@@ -1733,7 +1759,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Request */
+        /**
+         * Get Request
+         * @description The request plus the newest page of its thread — never the whole history (R15 P1-A).
+         *
+         *     `messages_total` is what lets the pane say "load older" honestly: the client compares how many it holds
+         *     with how many exist, so a page that happens to be exactly the page size cannot hide an older one.
+         */
         get: operations["getApiV1RequestsRequestId"];
         put?: never;
         post?: never;
@@ -1820,7 +1852,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Messages */
+        /**
+         * Get Messages
+         * @description One page of the thread, oldest first, newest page by default.
+         *
+         *     The response stays a plain list — existing consumers keep working — and paging is expressed in the query
+         *     string: `?before=<created_at of the oldest message you hold>`. A caller that wants to know whether more
+         *     exists compares with `messages_total` from the detail payload.
+         */
         get: operations["getApiV1RequestsRequestIdMessages"];
         put?: never;
         /** Reply (sends via the channel provider) */
@@ -3008,6 +3047,36 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * DashboardHomeOut
+         * @description The whole first paint of screen 1, in one response (R15 P0-B).
+         *
+         *     Five GETs used to leave the browser in parallel — summary, channels, status breakdown, today, recent — and
+         *     each one paid its own TLS/HTTP/auth/session cost before the first card could render. They are the same
+         *     reads, composed on one session, returned together: the KPIs, the chart, the donut, the «اليوم» board and
+         *     the recent list now arrive as one object, so the screen has one loading state instead of five staggered
+         *     ones. Each section keeps its own shape, so no consumer has to learn a new one.
+         */
+        DashboardHomeOut: {
+            /** Channels */
+            channels?: components["schemas"]["DashboardChannelOut"][];
+            /**
+             * Channels Days
+             * @default 7
+             */
+            channels_days: number;
+            /** Recent */
+            recent?: components["schemas"]["RequestOut"][];
+            /** Status Breakdown */
+            status_breakdown?: components["schemas"]["DashboardStatusOut"][];
+            summary: components["schemas"]["DashboardSummaryOut"];
+            /** Today */
+            today?: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
         /** DashboardStatusOut */
         DashboardStatusOut: {
             /** Count */
@@ -3666,6 +3735,11 @@ export interface components {
             items?: components["schemas"]["LeadOut"][];
             /** Status */
             status: string;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
         } & {
             [key: string]: unknown;
         };
@@ -5096,7 +5170,14 @@ export interface components {
             /** Subject */
             subject: string;
         };
-        /** RequestDetailOut */
+        /**
+         * RequestDetailOut
+         * @description One request and the **newest window** of its thread (R15 P1-A).
+         *
+         *     The lists are pages, not the whole history: `*_total` says how much exists behind them. A client learns
+         *     that "older messages" still exist by comparing the two, instead of guessing from the page size — the
+         *     unbounded version is what made a long negotiation thread slow to open and slow to scroll.
+         */
         RequestDetailOut: {
             /** Assigned To */
             assigned_to?: string | null;
@@ -5104,8 +5185,18 @@ export interface components {
             assignee_name?: string | null;
             /** Attachments */
             attachments?: components["schemas"]["AttachmentOut"][];
+            /**
+             * Attachments Total
+             * @default 0
+             */
+            attachments_total: number;
             /** Calls */
             calls?: components["schemas"]["CallOut"][];
+            /**
+             * Calls Total
+             * @default 0
+             */
+            calls_total: number;
             /** Channel */
             channel: string;
             /** Client Id */
@@ -5138,10 +5229,20 @@ export interface components {
             last_activity_at?: string | null;
             /** Messages */
             messages?: components["schemas"]["RequestMessageOut"][];
+            /**
+             * Messages Total
+             * @default 0
+             */
+            messages_total: number;
             /** Mobile */
             mobile?: string | null;
             /** Notes */
             notes?: components["schemas"]["RequestNoteOut"][];
+            /**
+             * Notes Total
+             * @default 0
+             */
+            notes_total: number;
             /** Number */
             number: number;
             /** Priority */
@@ -6829,6 +6930,39 @@ export interface operations {
             };
         };
     };
+    getApiV1DashboardHome: {
+        parameters: {
+            query?: {
+                /** @description window of the channel chart */
+                days?: number;
+                recent_limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardHomeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     "getApiV1DashboardRecent-Requests": {
         parameters: {
             query?: {
@@ -7994,6 +8128,8 @@ export interface operations {
                 assigned_to?: string | null;
                 q?: string | null;
                 unassigned?: boolean;
+                /** @description cards per lane (the rest is reported in `total`) */
+                per_column?: number;
             };
             header?: never;
             path?: never;
@@ -9204,7 +9340,10 @@ export interface operations {
     };
     getApiV1RequestsRequestId: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description newest messages to include */
+                message_limit?: number;
+            };
             header?: never;
             path: {
                 request_id: string;
@@ -9442,7 +9581,11 @@ export interface operations {
     };
     getApiV1RequestsRequestIdMessages: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                /** @description cursor: only messages older than this instant */
+                before?: string | null;
+            };
             header?: never;
             path: {
                 request_id: string;
