@@ -754,14 +754,14 @@ async def resolved_for_registry(session: AsyncSession) -> dict[str, ResolvedInte
     return out
 
 
+# `run_connection_test`, not `test_connection`: a module-level name starting with `test_` is read as a pytest
+# case by the linters (PT028 fired on the first draft), and a function that takes a request's body is not one.
 @dataclass(frozen=True)
 class TestOutcome:
     ok: bool
     detail: str
 
 
-# `run_connection_test`, not `test_connection`: a module-level name starting with `test_` is read as a pytest
-# case by the linters (PT028 fired on the first draft), and a function that takes a request's body is not one.
 async def run_connection_test(
     session: AsyncSession,
     actor: User,
@@ -948,8 +948,10 @@ async def _test_whatsapp(resolved: ResolvedIntegration) -> TestOutcome:
 
     Two calls, because one is not enough any more:
 
-    1. `GET /debug_token` — the token is alive and belongs to the App ID the operator typed. It needs
-       `access_token=app_id|app_secret` (an "app access token"): with `input_token` alone Meta answers
+    1. `POST /debug_token` — the token is alive and belongs to the App ID the operator typed. The app
+       access token travels in an `Authorization: Bearer` header and `input_token` in the form body, never in
+       the URL (a URL is what a log line, a proxy trace and a screenshot all carry). It needs
+       `app_id|app_secret` (an "app access token"): with `input_token` alone Meta answers
        "(#100) You must provide an app access token, or a user access token that is an owner or developer of
        the app", which says nothing about the token under test. `data.app_id` is the app the token was minted
        for, so a mismatch means the operator pasted a token from a *different* Meta app.
@@ -983,7 +985,13 @@ async def _test_whatsapp(resolved: ResolvedIntegration) -> TestOutcome:
     app_token = f"{app_id}|{app_secret}" if app_id else token
     try:
         async with _client(timeout=15) as client:
-            debug = await client.get(f"{base}/debug_token", params={"input_token": token, "access_token": app_token})
+            # POST + Authorization, never `?input_token=…&access_token=…`: a credential in a URL is copied
+            # into every access log, proxy trace and error report that touches the request line.
+            debug = await client.post(
+                f"{base}/debug_token",
+                data={"input_token": token},
+                headers={"Authorization": f"Bearer {app_token}"},
+            )
             if debug.status_code >= 400:
                 return TestOutcome(
                     False,
