@@ -114,6 +114,14 @@ class Settings(BaseSettings):
     TELEPHONY_WEBHOOK_URL: str = ""
     AI_ENABLED: bool = False
 
+    # --- realtime fan-out (R15 P1-C) ---
+    #: How the change feed crosses process boundaries. `auto` uses PostgreSQL LISTEN/NOTIFY, which every real
+    #: deployment already has, so two uvicorn workers notify the same tabs. `off` is for a database that cannot
+    #: hold a session open for LISTEN — PgBouncer in *transaction* pooling mode drops it, and so does a managed
+    #: Postgres that forbids `LISTEN`. With `off` the feed is process-local: correct for one worker, and the
+    #: revision probe in every tab (R15 P0-A) still repairs a tab that missed a change.
+    REALTIME_FANOUT: str = "auto"  # auto | off
+
     # --- redis / celery ---
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_TASK_ALWAYS_EAGER: bool = True
