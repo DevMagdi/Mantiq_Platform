@@ -166,7 +166,7 @@ async def whatsapp_webhook(request: Request, session: DbSession, background: Bac
             event_type="message",
             external_id=str(event["external_id"]),
             status="ok",
-            detail=f"media={'yes' if media_key else 'no'}" if event.get("media_id") else None,
+            detail=_message_detail(results[-1], media_requested=bool(event.get("media_id")), media_stored=bool(media_key)),
         )
     await session.commit()
     _ = background
@@ -329,6 +329,22 @@ async def email_webhook(request: Request, session: DbSession) -> dict[str, Any]:
     )
     await session.commit()
     return result
+
+
+def _message_detail(result: dict[str, Any], *, media_requested: bool, media_stored: bool) -> str:
+    """What the delivery actually did, in the row the operator reads when the inbox looks wrong.
+
+    "200 and a green event" was ambiguous: a duplicate retry, a message appended to an open thread, a Lead
+    match (which deliberately creates no request), and a brand-new ticket all looked identical. The fields
+    are written LTR because they are read as keys, not as prose.
+    """
+    parts = [f"outcome={result.get('outcome') or result.get('status') or 'unknown'}"]
+    matched = result.get("matched_kind")
+    if matched:
+        parts.append(f"matched={matched}")
+    if media_requested:
+        parts.append(f"media={'yes' if media_stored else 'no'}")
+    return " ".join(parts)
 
 
 def _ts(value: Any) -> datetime | None:
