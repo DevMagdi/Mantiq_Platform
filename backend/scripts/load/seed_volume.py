@@ -23,8 +23,16 @@ from decimal import Decimal
 
 from app.core.db import get_sessionmaker
 from app.core.security import hash_password
-from app.domain.enums import Channel, ClientStatus, ClientType, LeadStatus, RequestPriority, RequestStatus
-from app.models.auth import Role, User
+from app.domain.enums import (
+    Channel,
+    ClientStatus,
+    ClientType,
+    LeadStatus,
+    PortalRole,
+    RequestPriority,
+    RequestStatus,
+)
+from app.models.auth import ClientPortalUser, Role, User
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead
 from app.models.masters import InsuranceType, Insurer
@@ -43,6 +51,54 @@ OPEN = RequestStatus.open_statuses()
 async def _reps(session) -> list[User]:  # type: ignore[no-untyped-def]
     role = (await session.execute(select(Role).where(Role.code == "sales_rep"))).scalar_one()
     return list((await session.execute(select(User).where(User.role_id == role.id))).scalars().all())
+
+
+async def _extra_staff(session, role_code: str, prefix: str, count: int, title: str) -> None:  # type: ignore[no-untyped-def]
+    """One seat per concurrent browser context, for the roles the S3 scenario runs more than once.
+
+    Reps already had this (`_extra_reps`); managers, service desk and portal clients did not, so five contexts
+    signed in as `manager@mantiq.test` and five as one portal owner. Access tokens rotate on refresh, so when
+    one of those tabs refreshed, the others were signed out — and every step after that timed out on a login
+    redirect. The R8 spec noted the effect for reps and called it what it is: a refresh-token collision, not a
+    load measurement. With a seat each, a failure means the application failed.
+    """
+    role = (await session.execute(select(Role).where(Role.code == role_code))).scalar_one()
+    for i in range(count):
+        email = f"load.{prefix}{i:02d}@mantiq.test"
+        existing = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        if existing is None:
+            session.add(
+                User(email=email, password_hash=hash_password(PASSWORD), full_name=f"{title} {i + 1:02d}", role_id=role.id),
+            )
+    await session.flush()
+
+
+async def _extra_portals(session, count: int) -> None:  # type: ignore[no-untyped-def]
+    """Portal logins for the load clients, one client each, so five portal contexts are five clients."""
+    role = (await session.execute(select(Role).where(Role.code == "client_owner"))).scalar_one()
+    clients = list((await session.execute(select(Client).order_by(Client.name).limit(count))).scalars().all())
+    for i in range(count):
+        email = f"load.portal{i:02d}@mantiq.test"
+        existing = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        if existing is not None or not clients:
+            continue
+        user = User(
+            email=email,
+            password_hash=hash_password(PASSWORD),
+            full_name=f"عميل تحميل {i + 1:02d}",
+            role_id=role.id,
+        )
+        session.add(user)
+        await session.flush()
+        session.add(
+            ClientPortalUser(
+                user_id=user.id,
+                client_id=clients[i % len(clients)].id,
+                portal_role=PortalRole.OWNER,
+                full_name=user.full_name,
+            ),
+        )
+    await session.flush()
 
 
 async def _extra_reps(session, count: int) -> list[User]:  # type: ignore[no-untyped-def]
@@ -71,11 +127,18 @@ async def main() -> int:
     parser.add_argument("--clients", type=int, default=50)
     parser.add_argument("--requests", type=int, default=90)
     parser.add_argument("--reps", type=int, default=10)
+    # R15: the S3 scenario runs 5 managers, 5 service-desk and 5 portal contexts; each gets its own seat
+    parser.add_argument("--managers", type=int, default=5)
+    parser.add_argument("--service-desk", type=int, default=5)
+    parser.add_argument("--portal-clients", type=int, default=5)
     args = parser.parse_args()
 
     async with get_sessionmaker()() as session:
         reps = await _reps(session)
         reps += await _extra_reps(session, args.reps)
+        await _extra_staff(session, "sales_manager", "manager", args.managers, "مدير تحميل")
+        await _extra_staff(session, "customer_service", "cs", args.service_desk, "خدمة تحميل")
+        await _extra_portals(session, args.portal_clients)
         types = list((await session.execute(select(InsuranceType))).scalars().all())
         insurers = list((await session.execute(select(Insurer))).scalars().all())
         now = datetime.now(UTC)

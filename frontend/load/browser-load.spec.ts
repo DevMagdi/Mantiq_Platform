@@ -50,10 +50,19 @@ type UserResult = {
   server5xx: string[];
 };
 
+/**
+ * One seat per context (R15).
+ *
+ * Managers, service desk and portal clients used to share a single seeded account between five contexts. An
+ * access token rotates when it refreshes, so when one of those tabs refreshed the rest were signed out and
+ * every later step timed out waiting for a screen behind a login redirect — a token collision, counted as a
+ * load failure. `scripts/load/seed_volume.py` now creates a seat for each of them, like the reps always had.
+ * When one of these contexts fails now, the application failed.
+ */
 function emailFor(role: Role, index: number): string {
-  if (role === "manager") return "manager@mantiq.test";
-  if (role === "cs") return "cs@mantiq.test";
-  if (role === "portal") return "owner.mantiq@company.test";
+  if (role === "manager") return `load.manager${String(index).padStart(2, "0")}@mantiq.test`;
+  if (role === "cs") return `load.cs${String(index).padStart(2, "0")}@mantiq.test`;
+  if (role === "portal") return `load.portal${String(index).padStart(2, "0")}@mantiq.test`;
   return `load.rep${String(index % REPS).padStart(2, "0")}@mantiq.test`;
 }
 
@@ -72,10 +81,10 @@ async function signIn(page: Page, email: string): Promise<void> {
  *
  * A person moves between screens by clicking the sidebar, not by reloading the whole bundle every two
  * seconds; the first version of this spec used `page.goto` for every step, which throws the in-memory access
- * token away each time and makes every step call `POST /auth/refresh` — with several contexts signed in as
- * the same seeded account (5 managers share one, 5 portal clients share one) that is a refresh-token
- * collision, not a load measurement. Clicking the real `href` keeps the session like a human does, and
- * `page.goto` stays as the fallback for screens with no sidebar entry (`/leads/new`, the portal).
+ * token away each time and makes every step call `POST /auth/refresh` — and with several contexts on one
+ * seeded account that is a refresh-token collision, not a load measurement (every context has its own seat
+ * since R15, see `emailFor`). Clicking the real `href` keeps the session like a human does, and `page.goto`
+ * stays as the fallback for screens with no sidebar entry (`/leads/new`, the portal).
  */
 async function step(page: Page, role: Role, name: string, pathname: string, marker: RegExp): Promise<StepStat> {
   const started = Date.now();
