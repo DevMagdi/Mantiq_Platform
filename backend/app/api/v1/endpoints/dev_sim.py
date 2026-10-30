@@ -23,7 +23,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from app.api.v1.deps import DbSession
-from app.api.v1.endpoints.webhooks import stage_inbound_media
+from app.api.v1.endpoints.webhooks import _message_detail, stage_inbound_media
 from app.integrations.registry import whatsapp_provider
 from app.integrations.sims import require_simulation_allowed
 from app.integrations.storage import storage
@@ -118,6 +118,17 @@ async def sim_whatsapp(body: _SimWhatsApp, session: DbSession) -> dict[str, Any]
         media_mime=media_mime,
         media_size=media_size,
         duration_s=body.duration_s,
+    )
+    # The simulator claims to walk the webhook's own path, and the settings screen reads that path's event log
+    # to answer «هل يصل شيء؟». Without this row a developer simulating messages sees «لم يصل شيء» on the very
+    # screen they opened to check — the badge would contradict the panel (found by the live verification run).
+    await integrations_settings.record_event(
+        session,
+        provider="whatsapp",
+        event_type="message",
+        external_id=external_id,
+        status="ok",
+        detail=_message_detail(result, media_requested=bool(body.media_id), media_stored=bool(media_key)),
     )
     await session.commit()
     return result

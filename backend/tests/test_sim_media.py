@@ -113,3 +113,31 @@ async def test_a_real_looking_media_id_fails_soft_and_records_the_event(client: 
     assert failed[0].status == "error"
     assert failed[0].provider == "whatsapp"
     assert "MediaFetchError" in (failed[0].detail or "")
+
+
+async def test_a_simulated_message_shows_up_as_an_inbound_event(client: Any, session: Any, provider_calls: list[str]) -> None:
+    """The settings screen derives inbound health from `webhook_events`; the simulator must feed it.
+
+    Found by the live verification run: messages were ingested through the panel while the provider card still
+    said «لم يصل شيء» — the panel and the screen that exists to confirm deliveries contradicted each other.
+    """
+    from app.models.integrations import WebhookEvent
+
+    response = await client.post(
+        "/api/v1/dev/sim/whatsapp",
+        json={"mobile": "+201119997711", "body": "رسالة محاكاة", "external_id": "wamid.sim_event_row_1"},
+    )
+    assert response.status_code == 200, response.text
+
+    row = (
+        (
+            await session.execute(
+                select(WebhookEvent).where(WebhookEvent.provider == "whatsapp", WebhookEvent.external_id == "wamid.sim_event_row_1")
+            )
+        )
+        .scalars()
+        .first()
+    )
+    assert row is not None, "a simulated delivery must leave the same event row a real one does"
+    assert row.event_type == "message" and row.status == "ok"
+    assert row.detail and f"outcome={response.json()['outcome']}" in row.detail

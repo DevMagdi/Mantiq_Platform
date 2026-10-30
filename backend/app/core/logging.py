@@ -53,6 +53,29 @@ def setup_logging(level: str = "INFO", json_logs: bool = True) -> None:
     # (connection errors, bad responses) without the payload; redaction is the second line of defence.
     for name in NOISY_HTTP_LOGGERS:
         logging.getLogger(name).setLevel(logging.WARNING)
+    # uvicorn's *access* log is the third sink, and the one a structlog processor cannot reach: it formats its
+    # own line from `(client, method, full_path, version, status)` and writes it straight to stderr. A client
+    # that sends `?access_token=…` — ours no longer does, but a vendor callback or a curl from a terminal
+    # might — was printed verbatim. The filter masks the path argument; the formatting is untouched.
+    access = logging.getLogger("uvicorn.access")
+    access.addFilter(RedactAccessLog())
+
+
+class RedactAccessLog(logging.Filter):
+    """Mask secret query parameters in uvicorn's access line.
+
+    uvicorn logs `'%s - "%s %s HTTP/%s" %d'` with the **full path** as the third argument, so the query string
+    lands in the log exactly as received. Only that argument is rewritten — the client, method and status stay
+    readable, which is what makes the line useful while debugging.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        args = record.args
+        if isinstance(args, tuple) and len(args) >= 3 and isinstance(args[2], str):
+            patched = list(args)
+            patched[2] = redact(args[2])
+            record.args = tuple(patched)
+        return True
 
 
 class RedactSecrets:

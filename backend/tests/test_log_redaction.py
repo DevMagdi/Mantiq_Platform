@@ -83,3 +83,32 @@ def test_httpx_and_httpcore_are_silenced_below_warning() -> None:
     for name in NOISY_HTTP_LOGGERS:
         assert logging.getLogger(name).level == logging.WARNING, f"{name} still prints every request URL"
     assert set(NOISY_HTTP_LOGGERS) == {"httpx", "httpcore"}
+
+
+def test_uvicorn_access_log_masks_the_query_string() -> None:
+    """The access log is a third sink, and the only one structlog cannot reach.
+
+    Found by the live verification run: `INFO: … "GET /events?access_token=EAAG-… HTTP/1.1" 200` was
+    printed verbatim while every application line was redacted. uvicorn formats its own record from
+    `(client, method, full_path, version, status)` and writes it straight to stderr.
+    """
+    import logging
+
+    from app.core.logging import RedactAccessLog, redact
+
+    record = logging.LogRecord(
+        name="uvicorn.access",
+        level=logging.INFO,
+        pathname=__file__,
+        lineno=1,
+        msg='%s - "%s %s HTTP/%s" %d',
+        args=("127.0.0.1:5000", "GET", "/api/v1/events?access_token=EAAG-abc123&provider=whatsapp", "1.1", 200),
+        exc_info=None,
+    )
+    assert RedactAccessLog().filter(record) is True
+    rendered = record.getMessage()
+    assert "EAAG-abc123" not in rendered
+    assert "access_token=***" in rendered
+    # the parts that make the line useful must survive
+    assert "127.0.0.1:5000" in rendered and "GET" in rendered and "200" in rendered and "provider=whatsapp" in rendered
+    assert redact("input_token=xyz") == "input_token=***"
