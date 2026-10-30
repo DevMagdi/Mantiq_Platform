@@ -1676,6 +1676,51 @@
         "title": "DashboardChannelOut",
         "type": "object"
       },
+      "DashboardHomeOut": {
+        "additionalProperties": true,
+        "description": "The whole first paint of screen 1, in one response (R15 P0-B).\n\nFive GETs used to leave the browser in parallel — summary, channels, status breakdown, today, recent — and\neach one paid its own TLS/HTTP/auth/session cost before the first card could render. They are the same\nreads, composed on one session, returned together: the KPIs, the chart, the donut, the «اليوم» board and\nthe recent list now arrive as one object, so the screen has one loading state instead of five staggered\nones. Each section keeps its own shape, so no consumer has to learn a new one.",
+        "properties": {
+          "channels": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardChannelOut"
+            },
+            "title": "Channels",
+            "type": "array"
+          },
+          "channels_days": {
+            "default": 7,
+            "title": "Channels Days",
+            "type": "integer"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/RequestOut"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "status_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardStatusOut"
+            },
+            "title": "Status Breakdown",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/DashboardSummaryOut"
+          },
+          "today": {
+            "additionalProperties": true,
+            "title": "Today",
+            "type": "object"
+          }
+        },
+        "required": [
+          "summary"
+        ],
+        "title": "DashboardHomeOut",
+        "type": "object"
+      },
       "DashboardStatusOut": {
         "additionalProperties": true,
         "properties": {
@@ -3324,6 +3369,11 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
           }
         },
         "required": [
@@ -7306,6 +7356,7 @@
       },
       "RequestDetailOut": {
         "additionalProperties": true,
+        "description": "One request and the **newest window** of its thread (R15 P1-A).\n\nThe lists are pages, not the whole history: `*_total` says how much exists behind them. A client learns\nthat \"older messages\" still exist by comparing the two, instead of guessing from the page size — the\nunbounded version is what made a long negotiation thread slow to open and slow to scroll.",
         "properties": {
           "assigned_to": {
             "anyOf": [
@@ -7336,12 +7387,22 @@
             "title": "Attachments",
             "type": "array"
           },
+          "attachments_total": {
+            "default": 0,
+            "title": "Attachments Total",
+            "type": "integer"
+          },
           "calls": {
             "items": {
               "$ref": "#/components/schemas/CallOut"
             },
             "title": "Calls",
             "type": "array"
+          },
+          "calls_total": {
+            "default": 0,
+            "title": "Calls Total",
+            "type": "integer"
           },
           "channel": {
             "title": "Channel",
@@ -7467,6 +7528,11 @@
             "title": "Messages",
             "type": "array"
           },
+          "messages_total": {
+            "default": 0,
+            "title": "Messages Total",
+            "type": "integer"
+          },
           "mobile": {
             "anyOf": [
               {
@@ -7484,6 +7550,11 @@
             },
             "title": "Notes",
             "type": "array"
+          },
+          "notes_total": {
+            "default": 0,
+            "title": "Notes Total",
+            "type": "integer"
           },
           "number": {
             "title": "Number",
@@ -11007,6 +11078,66 @@
         ]
       }
     },
+    "/api/v1/dashboard/home": {
+      "get": {
+        "description": "Same permission as every other dashboard read (`requests.view`), same scope, one round trip.\n\nThe five single-purpose endpoints stay: an embedded client or a single card can still ask for exactly what\nit needs, and removing them would break consumers that exist. The SPA now asks this one instead.",
+        "operationId": "getApiV1DashboardHome",
+        "parameters": [
+          {
+            "description": "window of the channel chart",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "description": "window of the channel chart",
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recent_limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Recent Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardHomeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The whole dashboard first paint in one response (KPIs, chart, donut, today, recent)",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
     "/api/v1/dashboard/recent-requests": {
       "get": {
         "operationId": "getApiV1DashboardRecent-Requests",
@@ -12983,7 +13114,7 @@
     },
     "/api/v1/leads/board": {
       "get": {
-        "description": "`assigned_to` narrows to one rep, `unassigned=true` shows the pool. Neither can widen the scope.",
+        "description": "`assigned_to` narrows to one rep, `unassigned=true` shows the pool. Neither can widen the scope.\n\nEach lane is capped (`per_column`, default 60) and reports its true `total`, so the badge never lies and\nthe browser never mounts a lane it cannot scroll.",
         "operationId": "getApiV1LeadsBoard",
         "parameters": [
           {
@@ -13027,6 +13158,20 @@
               "default": false,
               "title": "Unassigned",
               "type": "boolean"
+            }
+          },
+          {
+            "description": "cards per lane (the rest is reported in `total`)",
+            "in": "query",
+            "name": "per_column",
+            "required": false,
+            "schema": {
+              "default": 60,
+              "description": "cards per lane (the rest is reported in `total`)",
+              "maximum": 200,
+              "minimum": 10,
+              "title": "Per Column",
+              "type": "integer"
             }
           }
         ],
@@ -14870,6 +15015,7 @@
     },
     "/api/v1/requests/{request_id}": {
       "get": {
+        "description": "The request plus the newest page of its thread — never the whole history (R15 P1-A).\n\n`messages_total` is what lets the pane say \"load older\" honestly: the client compares how many it holds\nwith how many exist, so a page that happens to be exactly the page size cannot hide an older one.",
         "operationId": "getApiV1RequestsRequestId",
         "parameters": [
           {
@@ -14880,6 +15026,20 @@
               "format": "uuid",
               "title": "Request Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "newest messages to include",
+            "in": "query",
+            "name": "message_limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "newest messages to include",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Message Limit",
+              "type": "integer"
             }
           }
         ],
@@ -15222,6 +15382,7 @@
     },
     "/api/v1/requests/{request_id}/messages": {
       "get": {
+        "description": "One page of the thread, oldest first, newest page by default.\n\nThe response stays a plain list — existing consumers keep working — and paging is expressed in the query\nstring: `?before=<created_at of the oldest message you hold>`. A caller that wants to know whether more\nexists compares with `messages_total` from the detail payload.",
         "operationId": "getApiV1RequestsRequestIdMessages",
         "parameters": [
           {
@@ -15232,6 +15393,37 @@
               "format": "uuid",
               "title": "Request Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "cursor: only messages older than this instant",
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "cursor: only messages older than this instant",
+              "title": "Before"
             }
           }
         ],
