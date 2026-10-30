@@ -28,6 +28,7 @@ import {
   type ProviderState,
 } from "@/features/settings/model";
 import { INSTALLMENTS_BY_PLAN } from "@/features/settings/model";
+import { EventsCard } from "@/features/settings/SettingsHub";
 import { ar } from "@/lib/i18n/ar";
 import { en } from "@/lib/i18n/en";
 import { STAFF_ROUTES } from "@/lib/routes";
@@ -49,6 +50,8 @@ const providerState = vi.hoisted(() => (overrides: Partial<ProviderState> = {}):
   last_tested_at: null,
   last_test_status: null,
   last_test_detail: null,
+  inbound_health: "never",
+  last_test_warnings: [],
   updated_at: null,
   ...overrides,
 }));
@@ -241,5 +244,48 @@ describe("the card renders what the API said — and nothing it did not", () => 
     expect(screen.getByTestId("connection-missing-whatsapp")).toHaveTextContent("Access Token");
     expect(screen.queryByTestId("live-switch-whatsapp")).not.toBeInTheDocument();
     missing.unmount();
+  });
+});
+
+/**
+ * R17 §4: a delivery answered 200 with a green row while the inbox stayed empty, and the screen never said
+ * which of four things had happened. The webhook writes `outcome=… matched=…` into the row's detail; the
+ * list has to show it, or the field is written for nobody.
+ */
+describe("inbound events show what the delivery did", () => {
+  it("renders the outcome written by the webhook, next to the event type", async () => {
+    const events = [
+      {
+        id: "e1",
+        provider: "whatsapp",
+        event_type: "message",
+        external_id: "wamid.ABC",
+        status: "ok",
+        detail: "outcome=lead_activity matched=lead",
+        occurred_at: new Date().toISOString(),
+      },
+      {
+        id: "e2",
+        provider: "whatsapp",
+        event_type: "message",
+        external_id: "wamid.DEF",
+        status: "ok",
+        detail: null,
+        occurred_at: new Date().toISOString(),
+      },
+    ];
+    api.get.mockResolvedValue(events);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: 0 } } });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>
+          <EventsCard />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByTestId("event-detail-e1")).toHaveTextContent("outcome=lead_activity matched=lead");
+    // a row without a detail must not grow an empty dash
+    expect(screen.queryByTestId("event-detail-e2")).not.toBeInTheDocument();
   });
 });

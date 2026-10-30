@@ -7,7 +7,7 @@
  * the backend stops offering would otherwise keep rendering here as a dead input forever.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, PlugZap, RefreshCw } from "lucide-react";
+import { CheckCircle2, Copy, PlugZap, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -18,7 +18,7 @@ import { relativeTime } from "@/lib/format";
 
 import { asText } from "@/lib/text";
 
-import { connectionBadge, MASK, secretPatch, type ProviderState, type SecretDraft } from "./model";
+import { connectionBadge, inboundBadge, MASK, secretPatch, type ProviderState, type SecretDraft } from "./model";
 
 /** The dialects the API accepts in a text field. `sim` is deliberately not one of them (R9 §1.D). */
 const CHOICES: Record<string, readonly string[]> = {
@@ -39,6 +39,8 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
   const [config, setConfig] = useState<Record<string, unknown>>({});
   const [secrets, setSecrets] = useState<Record<string, SecretDraft>>({});
   const [lastTest, setLastTest] = useState<{ ok: boolean; detail: string } | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [showChecklist, setShowChecklist] = useState(false);
   const [templates, setTemplates] = useState<TemplateRow[] | null>(null);
 
   // re-seed from the row whenever it changes, so a save by someone else does not leave a stale form
@@ -47,12 +49,16 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
     setSecrets({});
     // the stored outcome belongs to the row, so a failure explains itself on load — not only after a click
     setLastTest(state.last_test_detail ? { ok: state.last_test_status === "ok", detail: state.last_test_detail } : null);
+    // the warnings are stored with the row, so «توكن ينتهي خلال 24 ساعة» is still on screen after a reload
+    setWarnings(Array.isArray(state.last_test_warnings) ? state.last_test_warnings : []);
   }, [state]);
 
   const providerKey = asText(state?.provider);
   // Connection semantics only (R12 §A): the badge is connected / not connected / error, derived by the
   // server from the credentials it holds — there is no operator "switch to live" action any more.
   const badge = connectionBadge(state);
+  // R17 §3: «متصل» answers the outbound question only. This answers the one that leaves the inbox empty.
+  const inbound = inboundBadge(state);
   const missing = state.missing_fields ?? [];
   const patch = useMemo(() => secretPatch(state.secrets ?? [], secrets), [state.secrets, secrets]);
   const dirty = useMemo(() => {
@@ -78,9 +84,10 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
   });
 
   const test = useMutation({
-    mutationFn: () => api.post<{ ok: boolean; detail: string }>(`/settings/integrations/${state.provider}/test`, {}),
+    mutationFn: () => api.post<{ ok: boolean; detail: string; warnings?: string[] }>(`/settings/integrations/${state.provider}/test`, {}),
     onSuccess: async (result) => {
       setLastTest({ ok: result.ok, detail: result.detail });
+      setWarnings(Array.isArray(result.warnings) ? result.warnings : []);
       toast(result.ok ? t("settings.testOk") : t("settings.testFailed"), result.ok ? "ok" : "error");
       await refresh();
     },
@@ -124,8 +131,24 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
                 {t(badge.labelKey)}
               </span>
             )}
+            {/* «متصل» alone is misleading: it means the credentials work, not that anything arrives. */}
+            <span className="text-[11px] text-muted">{t("settings.inbound.label")}:</span>
+            <span data-testid={`inbound-${providerKey}-${inbound.key}`} title={t(inbound.hintKey)}>
+              {inbound.tone ? (
+                <Badge tone={inbound.tone}>{t(inbound.labelKey)}</Badge>
+              ) : (
+                <span className="inline-flex items-center rounded-pill px-[10px] py-[3px] text-xs font-semibold" style={{ background: "var(--color-track)", color: "var(--color-muted)" }}>
+                  {t(inbound.labelKey)}
+                </span>
+              )}
+            </span>
           </div>
           <p className="mt-1 text-[12px] text-muted">{t(`settings.provider.${state.provider}Note`)}</p>
+          {inbound.key === "receiving" ? null : (
+            <p className="mt-1 max-w-[62ch] text-[12px]" style={{ color: inbound.tone === "r" ? "var(--r-ink)" : "var(--color-muted)" }} data-testid={`inbound-hint-${providerKey}`}>
+              {t(inbound.hintKey)}
+            </p>
+          )}
         </div>
         <div className="text-end text-[12px] text-muted">
           <div>{state.last_tested_at ? t("settings.lastTest", { when: relativeTime(state.last_tested_at) }) : t("settings.neverTested")}</div>
@@ -221,6 +244,22 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
         </div>
       ) : null}
 
+      {warnings.length && lastTest?.ok ? (
+        <div
+          className="mt-2 rounded-btn px-3 py-2 text-[12px]"
+          style={{ background: "var(--a-bg)", color: "var(--a-ink)" }}
+          data-testid={`test-warnings-${providerKey}`}
+          role="status"
+        >
+          <span className="font-semibold">{t("settings.warningsTitle")}</span>
+          <ul className="mt-1 list-disc space-y-1 ps-4">
+            {warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {badge.key !== "connected" && missing.length ? (
         <div
           className="mt-3 rounded-btn px-3 py-2 text-[12px]"
@@ -261,6 +300,33 @@ export function ProviderCard({ state, webhookUrl }: { state: ProviderState; webh
             </Button>
           </div>
           <p className="mt-1 text-[12px] text-muted">{webhookUrl.note}</p>
+        </div>
+      ) : null}
+
+      {state.provider === "whatsapp" ? (
+        <div className="mt-3">
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<CheckCircle2 size={14} strokeWidth={1.9} />}
+            onClick={() => setShowChecklist((prev) => !prev)}
+            data-testid="inbound-checklist-toggle"
+            aria-expanded={showChecklist}
+          >
+            {t("settings.inboundChecklist.open")}
+          </Button>
+          {showChecklist ? (
+            <div className="mt-2 rounded-btn bg-[var(--color-track)] p-3" data-testid="inbound-checklist">
+              <div className="mb-1 text-[12px] font-semibold text-ink">{t("settings.inboundChecklist.title")}</div>
+              <ol className="list-decimal space-y-1 ps-5 text-[12px] text-muted">
+                {(["url", "verify", "field", "published", "testLabel"] as const).map((step) => (
+                  <li key={step} data-testid={`inbound-step-${step}`}>
+                    {t(`settings.inboundChecklist.${step}`)}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
         </div>
       ) : null}
 

@@ -89,8 +89,12 @@ export default function SettingsHub() {
   );
 }
 
-/** The last inbound deliveries, straight from `webhook_events` — the answer to «هل وصل شيء؟». */
-function EventsCard() {
+/**
+ * The last inbound deliveries, straight from `webhook_events` — the answer to «هل وصل شيء؟».
+ * Exported so its one rule (the row shows what the delivery *did*, not only that it arrived) is testable
+ * without mounting the whole hub and its five queries.
+ */
+export function EventsCard() {
   const { t } = useTranslation();
   const events = useQuery({
     queryKey: ["settings", "events"],
@@ -116,6 +120,10 @@ function EventsCard() {
               <span className="min-w-0 flex-1 truncate text-muted" dir="ltr">
                 {event.event_type}
                 {event.external_id ? ` · ${event.external_id}` : ""}
+                {/* R17 §4: "200 and a green row" used to be ambiguous — a Lead match, a duplicate retry and
+                    an append to an open thread looked identical. The outcome is written into the row's detail
+                    by the webhook, and shown here as it was written (keys, not prose). */}
+                {event.detail ? <span data-testid={`event-detail-${event.id}`}> — {event.detail}</span> : null}
               </span>
               <span className="shrink-0 text-[12px] text-muted">{event.occurred_at ? relativeTime(event.occurred_at) : ""}</span>
               <span

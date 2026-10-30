@@ -59,17 +59,26 @@ def _list_base() -> Select[Any]:
     The brief serializer reads only names off the joined rows, so the eager collections
     hanging off them (client contacts, the assignee's scopes/permissions/portal link, the
     client's account owner chain) are `noload`-ed: without this they fired one selectin
-    query per relation per page for data the list never renders."""
+    query per relation per page for data the list never renders.
+
+    R17 §6: there are **two** paths to `clients` per row — `client` and `insured_person.client`
+    (`InsuredPerson.client` is `lazy="joined"`) — and `Client.account_owner` is eager too. Leaving the
+    second path unpruned joined the same `users` row twice per request, so SQLAlchemy reported
+    «Multiple rows returned with uselist=False for eagerly-loaded attribute 'Client.account_owner'»,
+    once per request on the busiest screen in the product. Both paths get the same three noloads."""
     from sqlalchemy.orm import joinedload
 
     from app.models.auth import Role, User
-    from app.models.clients import Client
+    from app.models.clients import Client, InsuredPerson
 
     return select(ServiceRequest).options(
         joinedload(ServiceRequest.client).noload(Client.contacts),
         joinedload(ServiceRequest.client).noload(Client.account_owner),
         joinedload(ServiceRequest.client).noload(Client.source_lead),
         joinedload(ServiceRequest.insured_person),
+        joinedload(ServiceRequest.insured_person).joinedload(InsuredPerson.client).noload(Client.contacts),
+        joinedload(ServiceRequest.insured_person).joinedload(InsuredPerson.client).noload(Client.account_owner),
+        joinedload(ServiceRequest.insured_person).joinedload(InsuredPerson.client).noload(Client.source_lead),
         joinedload(ServiceRequest.insurer),
         joinedload(ServiceRequest.insurance_type),
         joinedload(ServiceRequest.assignee).noload(User.scopes),

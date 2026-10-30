@@ -3,7 +3,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>محاكي القنوات — Mantiq</title>
 <style>
- :root{--bg:#F3F4F9;--card:#fff;--ink:#111827;--muted:#6B7280;--line:#E4E7F0;--primary:#4F46E5;--soft:#EEF0FF;--ok:#05603A;--radius:18px}
+ /* canonical palette (ADR-034): white content, navy ink, Mantiq Gold accent — no legacy indigo anywhere */
+ :root{--bg:#FAFBFC;--card:#FFFFFF;--ink:#0E1728;--muted:#5B6B7F;--line:rgba(22,39,59,.10);--navy:#16273B;--primary:#BDA77E;--on-accent:#0E1728;--soft:rgba(189,167,126,.12);--ok:#0F6B45;--radius:18px}
  *{box-sizing:border-box}
  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 "IBM Plex Sans Arabic",system-ui,sans-serif;padding:24px}
  h1{font-size:22px;margin:0 0 4px}
@@ -13,9 +14,11 @@
  h2{font-size:15px;margin:0 0 12px}
  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff}
- button{margin-top:14px;width:100%;padding:11px 18px;border:0;border-radius:12px;background:var(--primary);color:#fff;font-weight:600;font-size:14px;cursor:pointer}
- button.alt{background:var(--soft);color:var(--primary)}
- pre{background:#0E1424;color:#E5E7EB;padding:12px;border-radius:12px;overflow:auto;font-size:12px;min-height:52px;white-space:pre-wrap}
+ button{margin-top:14px;width:100%;padding:11px 18px;border:0;border-radius:12px;background:var(--primary);color:var(--on-accent);font-weight:600;font-size:14px;cursor:pointer}
+ button:hover{background:#8F7A52;color:#FFFFFF}
+ button.alt{background:var(--soft);color:#6E5C3B}
+ button.alt:hover{background:rgba(189,167,126,.22);color:#6E5C3B}
+ pre{background:#0E1728;color:#E8E2D4;padding:12px;border-radius:12px;overflow:auto;font-size:12px;min-height:52px;white-space:pre-wrap}
  .hint{font-size:12px;color:var(--muted);margin-top:8px}
  .ok{color:var(--ok);font-weight:600}
 </style></head><body>
@@ -48,6 +51,8 @@
  </div>
 </div>
 <script>
+ // injected by the API from settings.FRONTEND_URL: this page is served by the API, the app is not
+ const FRONTEND = __FRONTEND_URL__;
  const out = document.getElementById("out"), note = document.getElementById("note");
  const val = (form, name) => (form.elements.namedItem(name)?.value ?? "").trim();
  async function run(url, payload, label) {
@@ -73,6 +78,6 @@
       duration_s: Number(val(f,"duration_s") || 45), with_recording: val(f,"with_recording") === "true"}, "مكالمة واردة");
  });
  document.getElementById("open").addEventListener("click", () => {
-  location.href = "/inbox" + (window.__requestId ? "/" + window.__requestId : "");
+  location.href = FRONTEND + "/inbox" + (window.__requestId ? "/" + window.__requestId : "");
  });
 </script></body></html>

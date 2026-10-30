@@ -90,6 +90,28 @@ export function connectionBadge(state: ProviderState | null | undefined): { key:
   return { key: "not_connected", tone: null, labelKey: "settings.connection.notConnected" };
 }
 
+export type InboundKey = "receiving" | "stale" | "never" | "failing";
+
+/**
+ * The second badge — the one «متصل» cannot replace. `connected` answers "do our credentials work when we
+ * call out?", which is true for a channel whose Callback URL is wrong and whose inbox is silent. This maps
+ * the server's derived `inbound_health` to a tone: green only when mail has actually arrived, red when the
+ * newest delivery failed, amber when it has gone quiet, and neutral when nothing ever arrived (that is a
+ * setup state, not a failure). An unknown value is shown as «لم يصل شيء» rather than invented as healthy.
+ */
+export const INBOUND_BADGE: Record<InboundKey, { tone: "t" | "a" | "r" | null; labelKey: string; hintKey: string }> = {
+  receiving: { tone: "t", labelKey: "settings.inbound.receiving", hintKey: "settings.inbound.receivingHint" },
+  stale: { tone: "a", labelKey: "settings.inbound.stale", hintKey: "settings.inbound.staleHint" },
+  never: { tone: null, labelKey: "settings.inbound.never", hintKey: "settings.inbound.neverHint" },
+  failing: { tone: "r", labelKey: "settings.inbound.failing", hintKey: "settings.inbound.failingHint" },
+};
+
+export function inboundBadge(state: ProviderState | null | undefined): { key: InboundKey; tone: "t" | "a" | "r" | null; labelKey: string; hintKey: string } {
+  const raw = asText(state?.inbound_health);
+  const key: InboundKey = raw === "receiving" || raw === "stale" || raw === "failing" ? raw : "never";
+  return { key, ...INBOUND_BADGE[key] };
+}
+
 export function statusBadge(status: string | null | undefined): { tone: "t" | "b" | "r" | null; labelKey: string } {
   // `sim` is what an un-upgraded API still answers for a configured provider — read it as «جاهز», never
   // as a badge that says the channel is simulated.

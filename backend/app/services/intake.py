@@ -96,7 +96,9 @@ async def ingest_whatsapp_message(
     now = occurred_at or datetime.now(UTC)
 
     if await requests_repo.external_id_seen(session, external_id):
-        return {"status": "duplicate", "external_id": external_id}
+        # Meta retries deliveries; the retry is recorded by the caller with this outcome so the log shows
+        # *why* a 200 produced no new row instead of leaving the operator to guess.
+        return {"status": "duplicate", "outcome": "duplicate", "external_id": external_id}
 
     match = await match_caller(session, mobile)
     kind, insured_id, name, client_id, lead_id = (
@@ -204,8 +206,18 @@ async def ingest_whatsapp_message(
     await session.flush()
     if request is not None:
         await _notify_team(session, request, NotificationType.NEW_REQUEST, f"طلب #{request.number} عبر واتساب")
+    # `status` keeps its old three words — callers and tests depend on them. `outcome` is the honest one:
+    # a Lead match answers 200 with no request, and it used to be indistinguishable from a message appended
+    # to an existing thread, which is exactly the row the operator needs to tell apart at 2 a.m.
+    if created_request_id is not None:
+        outcome = "created"
+    elif kind == MatchKind.LEAD:
+        outcome = "lead_activity"
+    else:
+        outcome = "appended"
     return {
         "status": "created" if created_request_id else "appended",
+        "outcome": outcome,
         "request_id": str(request.id) if request else None,
         "request_number": request.number if request else None,
         "matched_kind": kind,

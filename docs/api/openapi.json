@@ -1498,6 +1498,13 @@
           "took_ms": {
             "title": "Took Ms",
             "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
@@ -6800,6 +6807,12 @@
             "title": "Connection Status",
             "type": "string"
           },
+          "inbound_health": {
+            "default": "never",
+            "description": "receiving | stale | never | failing — derived from inbound events, not from the outbound test (R16)",
+            "title": "Inbound Health",
+            "type": "string"
+          },
           "is_live": {
             "title": "Is Live",
             "type": "boolean"
@@ -6836,6 +6849,14 @@
               }
             ],
             "title": "Last Test Status"
+          },
+          "last_test_warnings": {
+            "description": "non-fatal notes from the last connection test",
+            "items": {
+              "type": "string"
+            },
+            "title": "Last Test Warnings",
+            "type": "array"
           },
           "last_tested_at": {
             "anyOf": [

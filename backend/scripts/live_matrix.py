@@ -567,8 +567,19 @@ async def main() -> int:
         saved_env = {
             key: os.environ.get(key)
             for key in (
+                # every key the production block below mutates: a value left behind turns the *rest* of the
+                # matrix into a test of a half-production process (it wrote to /srv/objects and 500'd the
+                # policy issuance, which is a bug in this script, not in the app)
                 "ENV",
+                "DEBUG",
                 "INTEGRATIONS_DRIVER",
+                "COOKIE_SECURE",
+                "CORS_ORIGINS",
+                "PUBLIC_BASE_URL",
+                "DATABASE_URL",
+                "STORAGE_BACKEND",
+                "STORAGE_DIR",
+                "CELERY_TASK_ALWAYS_EAGER",
                 "JWT_SECRET",
                 "SECRETS_ENCRYPTION_KEY",
                 "WHATSAPP_ACCESS_TOKEN",
@@ -577,9 +588,21 @@ async def main() -> int:
             )
         }
         try:
+            # A *coherent* production environment. The boot guard refuses to construct `Settings` when the
+            # env is half-dev (http CORS, SQLite, a temp storage dir, eager Celery) — and it is right to:
+            # the guard working is exactly what this block verifies next. Setting only `ENV=prod` made the
+            # guard fire during setup, so the script died with a ValidationError instead of testing anything.
             os.environ.update(
                 ENV="prod",
+                DEBUG="false",
                 INTEGRATIONS_DRIVER="live",
+                COOKIE_SECURE="true",
+                CORS_ORIGINS="https://qa.example.com",
+                PUBLIC_BASE_URL="https://qa.example.com",
+                DATABASE_URL="postgresql+asyncpg://qa:qa@127.0.0.1:5432/qa",
+                STORAGE_BACKEND="s3",
+                STORAGE_DIR="/srv/objects",
+                CELERY_TASK_ALWAYS_EAGER="false",
                 JWT_SECRET="qa-production-jwt-secret-that-is-long-enough",
                 SECRETS_ENCRYPTION_KEY="qa-production-secrets-key-that-is-long-enough",
                 WHATSAPP_ACCESS_TOKEN="",

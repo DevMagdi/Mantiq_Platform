@@ -112,9 +112,15 @@ def test_debug_token_is_called_with_the_app_id_and_secret_as_access_token() -> N
 
     debug = recorder.requests[0]
     assert str(debug.url).startswith(f"{graph_base()}/debug_token")
-    params = debug.url.params
-    assert params["input_token"] == TOKEN
-    assert params["access_token"] == f"{APP_ID}|{APP_SECRET}"
+    # neither credential may sit in the URL — a URL is what access logs, proxies and screenshots carry
+    assert "input_token" not in str(debug.url)
+    assert "access_token" not in str(debug.url)
+    assert TOKEN not in str(debug.url)
+    assert APP_SECRET not in str(debug.url)
+    # …they travel in the body and the Authorization header instead
+    body = debug.content.decode()
+    assert "input_token=" + TOKEN in body
+    assert debug.headers["authorization"] == f"Bearer {APP_ID}|{APP_SECRET}"
     assert outcome.ok is True, outcome.detail
 
 
@@ -124,9 +130,10 @@ def test_without_an_app_id_the_stored_token_is_presented() -> None:
     recorder = _Recorder(_healthy_routes())
     _run(recorder, resolved)
 
-    params = recorder.requests[0].url.params
-    assert params["access_token"] == TOKEN, "with no App ID the only credential we can present is the token"
-    assert params["input_token"] == TOKEN
+    debug = recorder.requests[0]
+    assert debug.headers["authorization"] == f"Bearer {TOKEN}", "with no App ID the only credential we can present is the token"
+    assert "input_token=" + TOKEN in debug.content.decode()
+    assert TOKEN not in str(debug.url)
 
 
 def test_a_token_belonging_to_another_app_fails_and_names_both_ids() -> None:
